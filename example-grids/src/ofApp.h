@@ -29,6 +29,7 @@ class ofApp : public ofBaseApp{
         int count;
         bool iso;
         string name;
+        vector<int> sel;
     
         
 };

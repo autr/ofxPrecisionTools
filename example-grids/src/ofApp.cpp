@@ -9,6 +9,7 @@ void ofApp::setup(){
     count = 0;
     depth = 2;
     maxIter = 6;
+    sel = {};
     
     grid = new ofxPrecisionRow((int)ofRandom(0, 1.9), NULL);
     ofRectangle r(200,200,ofGetWidth() - 400, ofGetHeight() - 400);
@@ -23,13 +24,13 @@ void ofApp::setup(){
 
 void ofApp::generate(ofxPrecisionRow * iter) {
     
-    ofxPrecisionRow * a = &grid->add(1);
-    grid->add(0);
-    grid->add(0);
-    grid->add(0);
+    ofxPrecisionRow * a = &grid->add(0);
+//    grid->add(0);
     
     a->add(0);
-    a->add(1);
+    a->add(0);
+    a->add(0);
+    a->add(0);
     a->add(0);
 //
 //    a->add(1);
@@ -80,6 +81,9 @@ void ofApp::draw(){
     
     grid->draw(0, iso);
     
+    ofSetColor(255);
+    ofDrawRectangle(grid->get(sel)->bounds);
+    
     if (iso) ofPopMatrix();
     
 }
@@ -89,14 +93,21 @@ void ofApp::keyPressed(int key){
 //    if (key == 'a') row->add(0);
 //    if (key == 'z') row.setWidth(0, ofRandom(0, 1));
     
+    if (key == OF_KEY_UP) sel.push_back(0);
+    if (key == OF_KEY_DOWN && sel.size() > 0) sel.pop_back();
+    if ( key == OF_KEY_LEFT ) sel.back() = sel.back() - 1;
+    if ( key == OF_KEY_RIGHT ) sel.back() = sel.back() + 1;
+    
     if (key == 'q') maxIter -= 1;
     if (key == 'w') maxIter += 1;
     if (key == 'a') depth -= 1;
     if (key == 's') depth += 1;
     
     if (key == ' ') {
-        delete grid;
         iso = !iso;
+    }
+    if (key == 'z') {
+        delete grid;
         count = 0;
         
         grid = new ofxPrecisionRow((int)ofRandom(0, 1.9), NULL);
@@ -122,15 +133,18 @@ void ofApp::mouseMoved(int x, int y ){
 //--------------------------------------------------------------
 void ofApp::mouseDragged(int x, int y, int button){
 
+    grid->dragged(x, y);
 }
 
 //--------------------------------------------------------------
 void ofApp::mousePressed(int x, int y, int button){
 
+    grid->pressed(x, y);
 }
 
 //--------------------------------------------------------------
 void ofApp::mouseReleased(int x, int y, int button){
+    grid->released(x, y);
 
 }
 
