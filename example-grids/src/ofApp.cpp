@@ -3,7 +3,7 @@
 //--------------------------------------------------------------
 void ofApp::setup(){
     ofSetFrameRate(120);
-    
+    ofEnableAlphaBlending();
     ofLog::setAutoSpace(true);
     
     count = 0;
@@ -11,7 +11,7 @@ void ofApp::setup(){
     maxIter = 6;
     sel = {};
     
-    grid = new ofxPrecisionRow((int)ofRandom(0, 1.9), NULL);
+    grid = new ofxPrecisionGrid(0, NULL);
     ofRectangle r(200,200,ofGetWidth() - 400, ofGetHeight() - 400);
     grid->set(r);
     generate(grid);
@@ -22,9 +22,11 @@ void ofApp::setup(){
     
 }
 
-void ofApp::generate(ofxPrecisionRow * iter) {
-    
-    ofxPrecisionRow * a = &grid->add(0);
+void ofApp::generate(ofxPrecisionGrid * iter) {
+//    grid->add(0);
+//    grid->add(0);
+//    grid->add(0);
+    ofxPrecisionGrid * a = &grid->add(1);
 //    grid->add(0);
     
     a->add(0);
@@ -32,6 +34,11 @@ void ofApp::generate(ofxPrecisionRow * iter) {
     a->add(0);
     a->add(0);
     a->add(0);
+    ofxPrecisionGrid * aa = &grid->add(0);
+    aa->add(0);
+    aa->add(0);
+    aa->add(0);
+    grid->add(0);
 //
 //    a->add(1);
 //    ofxPrecisionRow * b = &a->add(1);
@@ -61,6 +68,19 @@ void ofApp::update(){
 
 }
 
+void ofApp::draw(ofxPrecisionGrid * g, int x, int y) {
+    
+    ofFill();
+    ofSetColor(grid->style.hoverColor);
+    
+    ofRectangle r(g->bounds);
+    r.y = y;
+    r.height = 10;
+    ofDrawRectangle(r);
+    for (auto & u : g->inner) draw(u, x, y + 20);
+}
+
+
 //--------------------------------------------------------------
 void ofApp::draw(){
     
@@ -80,11 +100,16 @@ void ofApp::draw(){
     }
     
     grid->draw(0, iso);
+    int x = 0;
+    int y = 20;
+    draw(grid, x, y);
     
-    ofSetColor(255);
-    ofDrawRectangle(grid->get(sel)->bounds);
+//    ofSetColor(255);
+//    ofDrawRectangle(grid->get(sel)->bounds);
     
     if (iso) ofPopMatrix();
+    
+    
     
 }
 
@@ -98,11 +123,6 @@ void ofApp::keyPressed(int key){
     if ( key == OF_KEY_LEFT ) sel.back() = sel.back() - 1;
     if ( key == OF_KEY_RIGHT ) sel.back() = sel.back() + 1;
     
-    if (key == 'q') maxIter -= 1;
-    if (key == 'w') maxIter += 1;
-    if (key == 'a') depth -= 1;
-    if (key == 's') depth += 1;
-    
     if (key == ' ') {
         iso = !iso;
     }
@@ -110,11 +130,31 @@ void ofApp::keyPressed(int key){
         delete grid;
         count = 0;
         
-        grid = new ofxPrecisionRow((int)ofRandom(0, 1.9), NULL);
+        grid = new ofxPrecisionGrid(0, NULL);
         ofRectangle r(200,200,ofGetWidth() - 400, ofGetHeight() - 400);
         grid->set(r);
         generate(grid);
         
+    }
+    
+    if (key == 'a' || key == 's') {
+        int t;
+        if (key == 'a') t = PRECISION_COL;
+        if (key == 's') t = PRECISION_ROW;
+        
+        for (auto & g : grid->global) {
+            for (auto & a : g->actions) {
+                if (a.type == PRECISION_DR || a.type == PRECISION_DB) {
+                    g->parent->add(t, g->getIndex() + 1);
+                }
+                if (a.type == PRECISION_DL || a.type == PRECISION_DT) {
+                    g->parent->add(t, g->getIndex());
+                }
+                if (a.type == PRECISION_IN) {
+                    g->add(t);
+                }
+            }
+        }
     }
     
     

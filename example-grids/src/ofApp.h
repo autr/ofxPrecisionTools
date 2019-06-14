@@ -22,8 +22,9 @@ class ofApp : public ofBaseApp{
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
     
-        ofxPrecisionRow * grid;
-        void generate(ofxPrecisionRow * iter);
+        void draw(ofxPrecisionGrid * g, int x, int y);
+        ofxPrecisionGrid * grid;
+        void generate(ofxPrecisionGrid * iter);
         int depth;
         int maxIter;
         int count;
