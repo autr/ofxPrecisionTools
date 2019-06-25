@@ -26,7 +26,7 @@ void ofApp::generate(ofxPrecisionGrid * iter) {
 //    grid->add(0);
 //    grid->add(0);
 //    grid->add(0);
-    ofxPrecisionGrid * a = &grid->add(1);
+    ofxPrecisionGrid * a = &grid->add(0);
 //    grid->add(0);
     
     a->add(0);
@@ -34,9 +34,11 @@ void ofApp::generate(ofxPrecisionGrid * iter) {
     a->add(0);
     a->add(0);
     a->add(0);
-    ofxPrecisionGrid * aa = &grid->add(0);
+    ofxPrecisionGrid * aa = &grid->add(1);
     aa->add(0);
-    aa->add(0);
+    ofxPrecisionGrid * aaa = &aa->add(0);
+    aaa->add(0);
+    aaa->add(0);
     aa->add(0);
     grid->add(0);
 //
@@ -99,7 +101,7 @@ void ofApp::draw(){
         ofTranslate(-w, -h);
     }
     
-    grid->draw(0, iso);
+    grid->draw(iso);
     int x = 0;
     int y = 20;
     draw(grid, x, y);

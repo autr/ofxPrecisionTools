@@ -32,7 +32,7 @@ struct ofxPrecisionGridStyle {
     ofColor dropColor;
     ofxPrecisionGridStyle() {
         defaultColor = ofColor(0,120,120, 255);
-        hoverColor = ofColor(150, 255, 255, 255);
+        hoverColor = ofColor(255, 255, 255, 255);
         dropColor = ofColor(150, 255, 255, 100);
     }
 };
@@ -45,6 +45,7 @@ struct ofxPrecisionAction {
     ofPoint oPress;
     vector<float> mHeights;
     vector<float> mWidths;
+    ofxPrecisionGrid * unit;
     
     ofxPrecisionAction(int t, ofRectangle b, ofPoint p, vector<float> mW, vector<float> mH) {
         type = t;
@@ -69,6 +70,7 @@ public:
     ofRectangle bounds;
     
     int type;
+    int depth;
     float mH, mW;
     float minPadding;
     int uId;
@@ -104,7 +106,7 @@ public:
         set(r);
     }
     void set(ofRectangle r) {
-        minPadding = 10;
+        minPadding = 0;
         uId = 0;
         name = getName(name);
         float p = minPadding;
@@ -152,9 +154,15 @@ public:
     }
     
     void moved(int x, int y) {
-        ofPoint p(x,y);
-        float padd = minPadding;
+        
+        
+        float padd = 5;//minPadding;
         for (auto & g : global) {
+            
+            /*-- offset by depth --*/
+            
+            int d = g->depth;
+            ofPoint p( x + (d * -10) , y + (d * -10) );
             
             vector<float> mWidths = g->getWidths();
             vector<float> mHeights = g->getHeights();
@@ -285,7 +293,9 @@ public:
                             sib->mW = w;
                             if (i == idx) sib->mW = w - offX;
                             if (i == idx + 1) sib->mW = w + offX;
-                        } else {
+                        }
+                        
+                        if (a.type == PRECISION_H) {
                             sib->mH = h;
                             if (i == idx) sib->mH = h - offY;
                             if (i == idx + 1) sib->mH = h + offY;
@@ -299,7 +309,9 @@ public:
                             sib->mW = w;
                             if (i == idx) sib->mW = w - offX;
                             if (i > idx) sib->mW = w + offX / (float)( a.mWidths.size() - idx - 1 );
-                        } else {
+                        }
+                        
+                        if (a.type == PRECISION_H) {
                             sib->mH = h;
                             if (i == idx) sib->mH = h - offY;
                             if (i > idx) sib->mH = h + offY / (float)( a.mHeights.size() - idx - 1 );
@@ -311,7 +323,9 @@ public:
                             sib->mW = w;
                             if (i < idx + 1) sib->mW = w - (offX / (float)( idx + 1) );
                             if (i == idx + 1) sib->mW = w + offX;
-                        } else {
+                        }
+                        
+                        if (a.type == PRECISION_H) {
                             sib->mH = h;
                             if (i < idx + 1) sib->mH = h - (offY / (float)( idx + 1) );
                             if (i == idx + 1) sib->mH = h + offY;
@@ -330,7 +344,7 @@ public:
     }
     
     
-    void draw(int d = 0, bool iso = false) {
+    void draw(bool iso = false) {
         
         
         ofColor c = style.defaultColor;
@@ -340,14 +354,12 @@ public:
         ofSetLineWidth(2);
         
         ofPushMatrix();
+        int d = depth;
+        ofTranslate(d * - 10, d * - 10, 0 );
         if (iso) {
             ofTranslate(0,0,d * 60);
         }
         ofRectangle r = bounds;
-//        r.x += 5;
-//        r.y += 5;
-//        r.width -= 10;
-//        r.height -= 10;
         ofDrawRectangle(r);
         string s = "x";
         s += ofToString(bounds.x) + " y";
@@ -362,11 +374,16 @@ public:
             p.z -= 60;
             ofDrawLine(c, p);
         }
+        
+        ofFill();
+        ofSetColor(0);
+        ofDrawRectangle(bounds);
+        
         ofPopMatrix();
         
         int i = 0;
         d += 1;
-        for (auto & ch : inner) ch->draw(d, iso);
+        for (auto & ch : inner) ch->draw(iso);
         
         if (!parent) {
             for (auto & g : global) {
@@ -381,9 +398,9 @@ public:
                     }
                     ofSetColor(style.dropColor);
                     ofFill();
-                    if (a.type == PRECISION_IN) {
-                        ofDrawRectangle(g->bounds);
-                    }
+//                    if (a.type == PRECISION_IN) {
+//                        ofDrawRectangle(g->bounds);
+//                    }
                     ofNoFill();
                 }
             }
@@ -426,6 +443,11 @@ public:
         
     }
     
+    int & getDepth(int & d) {
+        if (!parent) return d;
+        d += 1;
+        return parent->getDepth(d);
+    }
     ofxPrecisionGrid & add(int t, int idx = -1) {
         
         
@@ -433,10 +455,14 @@ public:
         
         /*-- Insert new rect --*/
         
-        if (idx > inner.size() || idx < 0) idx = inner.size();
-        inner.insert(inner.begin() + idx, ch);
-        ch->mH = 1;
-        ch->mW = 1;
+        if (idx > inner.size() || idx < 0) idx = inner.size(); // safe IDX
+        
+        inner.insert(inner.begin() + idx, ch); // insert @ IDX
+        ch->mH = 1; // default multiH
+        ch->mW = 1; // default multiWidth
+        int d = 0;
+        ch->depth = getDepth(d);
+        
         
         amend();
         
@@ -475,11 +501,6 @@ public:
         }
     }
     
-    int & getDepth(int & d) {
-        if (!parent) return d;
-        d += 1;
-        return parent->getDepth(d);
-    }
     
     ofxPrecisionGrid * getRoot() {
         if (parent) return parent;
