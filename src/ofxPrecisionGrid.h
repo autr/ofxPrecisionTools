@@ -4,6 +4,7 @@
 
 #define PRECISION_COL 0
 #define PRECISION_ROW 1
+#define PRECISION_OBJ 2
 
 #define PRECISION_W 0 // width
 #define PRECISION_H 1 // height
@@ -30,60 +31,52 @@ struct ofxPrecisionGridStyle {
     ofColor defaultColor;
     ofColor hoverColor;
     ofColor dropColor;
+    float resizeOffset;
+    float minWidth;
+    float minHeight;
     ofxPrecisionGridStyle() {
         defaultColor = ofColor(0,120,120, 255);
         hoverColor = ofColor(255, 255, 255, 255);
         dropColor = ofColor(150, 255, 255, 100);
+        resizeOffset = 0;
+        minWidth = 10;
+        minHeight = 10;
     }
 };
+
+struct ofxPrecisionError {
+    string msg;
+    string name;
+    ofxPrecisionError(string m, string n) {
+        msg = m;
+        name = n;
+    }
+};
+
 
 class ofxPrecisionGrid;
 
-struct ofxPrecisionAction {
-    ofRectangle oBounds;
-    int type;
-    ofPoint oPress;
-    vector<float> mHeights;
-    vector<float> mWidths;
-    ofxPrecisionGrid * unit;
-    
-    ofxPrecisionAction(int t, ofRectangle b, ofPoint p, vector<float> mW, vector<float> mH) {
-        type = t;
-        oBounds = b;
-        oPress = p;
-        mWidths = mW;
-        mHeights = mH;
-    }
-};
 
 class ofxPrecisionGrid {
 public:
     
-    /*-- Statuses --*/
-    
-    bool bResizeHovered;
-    bool bDropHovered;
-    bool bHovered;
-    
     ofxPrecisionGridStyle style;
-    
     ofRectangle bounds;
     
     int type;
     int depth;
     float mH, mW;
-    float minPadding;
-    int uId;
     string name;
     
+    vector<int> location;
     ofxPrecisionGrid * parent;
     vector<ofxPrecisionGrid *> inner;
     vector<ofxPrecisionGrid *> global;
-    map<int, ofxPrecisionGrid *> gHash;
+    vector<ofxPrecisionError> errors;
+    map<string, ofxPrecisionGrid *> hash;
     
-    vector<ofxPrecisionAction> actions;
-    
-    ofEvent<ofxPrecisionGrid> added;
+    ofEvent<string> added;
+    ofEvent<string> amended;
     
     
     ofxPrecisionGrid *& operator[] (size_t i) {
@@ -91,9 +84,18 @@ public:
     }
     
     ofxPrecisionGrid() {
+        
+        /*-- root --*/
+        
         mH = 1;
         mW = 1;
         type = 0;
+        parent = NULL;
+        hash[name] = this;
+        global.push_back(this);
+        amend();
+        
+        
     };
     ofxPrecisionGrid(int t, ofxPrecisionGrid * p) {
         mH = 1;
@@ -105,17 +107,20 @@ public:
         ofRectangle r(x, y, w, h);
         set(r);
     }
-    void set(ofRectangle r) {
-        minPadding = 0;
-        uId = 0;
-        name = getName(name);
-        float p = minPadding;
+    void set(ofRectangle & r) {
+//        name = getName(name);
+        float p = 0;
         r.x += p;
         r.y += p;
         r.width -= p * 2;
         r.height -= p * 2;
+        
+        if ((r.width < style.minWidth) || (r.height < style.minHeight)) {
+            ofxPrecisionError err("Bounds too small", name);
+            getRoot()->errors.push_back(err);
+        }
+        
         bounds = r;
-        amend();
     }
     void setWidth(float w) {
         set(bounds.x, bounds.y, w, bounds.height);
@@ -136,6 +141,7 @@ public:
     }
     
     
+    
     vector<float> getWidths() {
         vector<float> w;
         if (!parent) return w;
@@ -153,195 +159,6 @@ public:
         return h;
     }
     
-    void moved(int x, int y) {
-        
-        
-        float padd = 5;//minPadding;
-        for (auto & g : global) {
-            
-            /*-- offset by depth --*/
-            
-            int d = g->depth;
-            ofPoint p( x + (d * -10) , y + (d * -10) );
-            
-            vector<float> mWidths = g->getWidths();
-            vector<float> mHeights = g->getHeights();
-            
-            g->bDropHovered = false;
-            g->bResizeHovered = false;
-            g->bHovered = false;
-            
-            g->actions.clear();
-            
-            ofPoint tl = g->bounds.getTopLeft();
-            ofPoint tr = g->bounds.getTopRight();
-            ofPoint br = g->bounds.getBottomRight();
-            ofPoint bl = g->bounds.getBottomLeft();
-            
-            bool inR = (x > tr.x - padd && x < tr.x + padd);
-            bool inB = (y > bl.y - padd && y < bl.y + padd);
-            bool inL = (x > tl.x - padd && x < tl.x + padd);
-            bool inT = (y > bl.y - padd && y < bl.y + padd);
-            
-            bool inH = (y > tr.y - padd && y < br.y + padd);
-            bool inW = (x > bl.x - padd && x < br.x + padd);
-            
-            bool isLast = (g->getIndex() == g->parent->inner.size() - 1);
-            bool isInRow = (g->parent->type == PRECISION_ROW);
-            bool isInCol = (g->parent->type == PRECISION_COL);
-            bool noInner = (g->inner.size() <= 1);
-            
-            ofRectangle shri(g->bounds);
-            shri.x += padd;
-            shri.y += padd;
-            shri.width -= padd*2;
-            shri.height -= padd*2;
-            
-            /*-- drop area --*/
-            
-            if (shri.inside(x, y) && noInner) {
-                ofxPrecisionAction a(PRECISION_IN, g->bounds, p, mWidths, mHeights);
-                g->actions.push_back(a);
-                g->bHovered = true;
-            }
-            
-            /*-- width drag --*/
-            
-            if (inR && inH && !isLast && !isInCol) {
-                ofxPrecisionAction a(PRECISION_W, g->bounds, p, mWidths, mHeights);
-                g->actions.push_back(a);
-                g->bResizeHovered = true;
-            }
-            
-            /*-- drop right --*/
-            
-            if (inR && inH && isInRow) {
-                ofxPrecisionAction a(PRECISION_DR, g->bounds, p, mWidths, mHeights);
-                g->actions.push_back(a);
-                g->bDropHovered = true;
-            }
-            
-            /*-- drop left --*/
-            
-            if (inL && inH && isInRow) {
-                ofxPrecisionAction a(PRECISION_DL, g->bounds, p, mWidths, mHeights);
-                g->actions.push_back(a);
-                g->bDropHovered = true;
-            }
-            
-            /*-- height drag --*/
-            
-            
-            if (inB && inW && !isLast && !isInRow) {
-                vector<float> mWidths = g->getWidths();
-                vector<float> mHeights = g->getHeights();
-                ofxPrecisionAction a(PRECISION_H, g->bounds, p, mWidths, mHeights);
-                g->actions.push_back(a);
-                g->bResizeHovered = true;
-            }
-            
-            /*-- drop bottom --*/
-            
-            if (inB && inW && isInCol) {
-                ofxPrecisionAction a(PRECISION_DB, g->bounds, p, mWidths, mHeights);
-                g->actions.push_back(a);
-                g->bDropHovered = true;
-            }
-            
-            /*-- drop top --*/
-            
-            if (inT && inW && isInCol) {
-                ofxPrecisionAction a(PRECISION_DT, g->bounds, p, mWidths, mHeights);
-                g->actions.push_back(a);
-                g->bDropHovered = true;
-            }
-            
-        }
-    }
-    
-    void pressed(int x, int y) {
-        for (auto & g : global) {
-            for (auto & a : g->actions) {
-                a.oPress.x = x;
-                a.oPress.y = y;
-            }
-        }
-    }
-    
-    void dragged(int x, int y) {
-        
-        bool isShift = ofGetKeyPressed(OF_KEY_SHIFT);
-        bool isAlt = ofGetKeyPressed(OF_KEY_ALT);
-        
-        for (auto & u : global) {
-            for (auto & a : u->actions) {
-                
-                
-                float pW = u->parent->bounds.width; // parent width
-                float pH = u->parent->bounds.height; // parent height
-                float offX = (a.oPress.x - x) / pW; // X multiple
-                float offY = (a.oPress.y - y) / pH; // Y multiple
-                int idx = u->getIndex();
-                
-                for (int i = 0; i < u->parent->inner.size(); i++) {
-                    ofxPrecisionGrid * sib = u->parent->inner[i];
-                    float w = a.mWidths[i];
-                    float h = a.mHeights[i];
-                    
-                    if (!isShift && !isAlt) {
-                        if (a.type == PRECISION_W) {
-                            sib->mW = w;
-                            if (i == idx) sib->mW = w - offX;
-                            if (i == idx + 1) sib->mW = w + offX;
-                        }
-                        
-                        if (a.type == PRECISION_H) {
-                            sib->mH = h;
-                            if (i == idx) sib->mH = h - offY;
-                            if (i == idx + 1) sib->mH = h + offY;
-                        }
-                        
-                    } // !shit + !alt
-                    
-                    if (isShift && !isAlt) {
-                        
-                        if (a.type == PRECISION_W) {
-                            sib->mW = w;
-                            if (i == idx) sib->mW = w - offX;
-                            if (i > idx) sib->mW = w + offX / (float)( a.mWidths.size() - idx - 1 );
-                        }
-                        
-                        if (a.type == PRECISION_H) {
-                            sib->mH = h;
-                            if (i == idx) sib->mH = h - offY;
-                            if (i > idx) sib->mH = h + offY / (float)( a.mHeights.size() - idx - 1 );
-                        }
-                    } // shift + !alt
-                    
-                    if (isShift && isAlt) {
-                        if (a.type == PRECISION_W) {
-                            sib->mW = w;
-                            if (i < idx + 1) sib->mW = w - (offX / (float)( idx + 1) );
-                            if (i == idx + 1) sib->mW = w + offX;
-                        }
-                        
-                        if (a.type == PRECISION_H) {
-                            sib->mH = h;
-                            if (i < idx + 1) sib->mH = h - (offY / (float)( idx + 1) );
-                            if (i == idx + 1) sib->mH = h + offY;
-                        }
-                    } // shift + alt
-                    
-                } // for each sibling
-
-                u->parent->amend();
-                
-            } // for each action
-        }
-    }
-    void released(int x, int y) {
-        //        actions.clear();
-    }
     
     
     void draw(bool iso = false) {
@@ -354,11 +171,14 @@ public:
         ofSetLineWidth(2);
         
         ofPushMatrix();
-        int d = depth;
-        ofTranslate(d * - 10, d * - 10, 0 );
+        int d = depth + 1;
+        float o = style.resizeOffset;
+        ofTranslate(d * o, d * o, 0 );
         if (iso) {
             ofTranslate(0,0,d * 60);
         }
+        
+        
         ofRectangle r = bounds;
         ofDrawRectangle(r);
         string s = "x";
@@ -367,7 +187,13 @@ public:
         s += ofToString(bounds.width) + " h";
         s += ofToString(bounds.height) + " ";
         
-        if (parent) {
+        
+        if (type == PRECISION_OBJ) {
+            ofDrawLine( bounds.getTopLeft(), bounds.getBottomRight() );
+            ofDrawLine( bounds.getTopRight(), bounds.getBottomLeft() );
+        }
+        
+        if (parent && iso) {
             ofSetColor(255,255,255,100);
             ofVec3f p = parent->bounds.getCenter();
             ofVec3f c = bounds.getCenter();
@@ -375,9 +201,11 @@ public:
             ofDrawLine(c, p);
         }
         
+        
         ofFill();
         ofSetColor(0);
-        ofDrawRectangle(bounds);
+        
+//        ofDrawRectangle(bounds);
         
         ofPopMatrix();
         
@@ -385,39 +213,39 @@ public:
         d += 1;
         for (auto & ch : inner) ch->draw(iso);
         
-        if (!parent) {
-            for (auto & g : global) {
-                for (auto & a : g->actions) {
-                    ofSetColor(style.hoverColor);
-                    ofNoFill();
-                    if (a.type == PRECISION_W) {
-                        ofDrawLine(g->bounds.getTopRight(), g->bounds.getBottomRight());
-                    }
-                    if (a.type == PRECISION_H) {
-                        ofDrawLine(g->bounds.getBottomLeft(), g->bounds.getBottomRight());
-                    }
-                    ofSetColor(style.dropColor);
-                    ofFill();
-//                    if (a.type == PRECISION_IN) {
-//                        ofDrawRectangle(g->bounds);
-//                    }
-                    ofNoFill();
-                }
-            }
-        }
         
+    }
+    vector<int> & position(vector<int> & pos) {
+        if (!parent) {
+            return pos;
+        }
+        int i = getIndex();
+        pos.insert(pos.begin(), i);
+        return parent->position(pos);
+    }
+    
+    void tag() {
+        
+        /*-- amend naming and hash to position --*/
+        
+        vector<int> pos;
+        location = position(pos);
+        string ss = "|";
+        for (auto & i : location) {
+            ss += ">"+ofToString(i + 1);
+        }
+        if (name != ss) getRoot()->hash[ss] = this;
+        name = ss;
     }
     
     void amend() {
         
-        /*-- Iterate --*/
         
-        float tW = 0;
-        float tH = 0;
-        for (auto & c : inner) {
-            tW += c->mW;
-            tH += c->mH;
-        }
+        tag();
+        ofNotifyEvent(getRoot()->amended, name);
+        
+        /*-- iterate width, height and position into pixels --*/
+        
         float x = bounds.x;
         float y = bounds.y;
         float w = bounds.width;
@@ -425,51 +253,113 @@ public:
         
         float tX = x;
         float tY = y;
+        float tW = 0;
+        float tH = 0;
         
-        float p = minPadding * 2;
+        /*-- get max size multiples --*/
         
         for (auto & c : inner) {
+            tW += c->mW;
+            tH += c->mH;
+        }
+        
+        for (auto & c : inner) {
+            
+            c->tag();
+            
             float ww = ( bounds.width / tW ) * c->mW;
             float hh = ( bounds.height / tH ) * c->mH;
-            if (type == PRECISION_COL) c->set(x, tY, w, hh);
-            if (type == PRECISION_ROW) c->set(tX, y, ww, h);
-            tX += c->bounds.width + p;
-            tY += c->bounds.height + p;
+            
+            float cx = c->bounds.x;
+            float cy = c->bounds.y;
+            float cw = c->bounds.width;
+            float ch = c->bounds.height;
+            
+            float fx = x;
+            float fy = y;
+            float fw = w;
+            float fh = h;
+            
+            if (type == PRECISION_COL || type == PRECISION_OBJ) {
+                fy = tY;
+                fh = hh;
+            }
+            if (type == PRECISION_ROW) {
+                fx = tX;
+                fw = ww;
+            }
+            
+            bool isDiff = ( (fx != cx) || (fy != cy) || (fw != cw) || (fh != ch) );
+            
+            if (isDiff) c->set(fx, fy, fw, fh);
+//            ofNotifyEvent(getRoot()->amended, c->name);
+            
+            tX += c->bounds.width;
+            tY += c->bounds.height;
+            c->amend();
         }
     }
     
-    
-    void refresh() {
-        
-    }
     
     int & getDepth(int & d) {
         if (!parent) return d;
         d += 1;
         return parent->getDepth(d);
     }
+    
+    bool hasError() {
+        return errors.size() > 0;
+    }
+    
+    void erase() {
+//        parent->inner.erase(getIndex());
+    }
+    
+    ofxPrecisionGrid * getRoot() {
+        if (!parent) return this;
+        return parent->getRoot();
+    }
+    
     ofxPrecisionGrid & add(int t, int idx = -1) {
         
-        
         ofxPrecisionGrid * ch = new ofxPrecisionGrid(t, this);
+        ofxPrecisionGrid * root = ch->getRoot();
+        
+        if (root->hasError()) {
+            ofLogError("ofxPrecisionGrid") << "Trying to add child, but root element has error";
+            return * ch;
+        }
         
         /*-- Insert new rect --*/
         
         if (idx > inner.size() || idx < 0) idx = inner.size(); // safe IDX
         
+        int d = 0;
         inner.insert(inner.begin() + idx, ch); // insert @ IDX
         ch->mH = 1; // default multiH
         ch->mW = 1; // default multiWidth
-        int d = 0;
-        ch->depth = getDepth(d);
+        ch->depth = getDepth(d); // set depth
         
+        /*--- Generate position ---*/
         
+        root->global.push_back(ch);
         amend();
         
-        ofxPrecisionGrid * root = getRoot();
-        root->global.push_back(ch);
-        while ( root->gHash.find(uId) != root->gHash.end() ) uId += 1;
-        getRoot()->gHash[uId] = ch;
+        /*-- delete new item if it generated errors --*/
+        
+        if (root->hasError()) {
+            ofLogError("ofxPrecisionGrid") << "Added child, but this causes dimensions error ... deleting and returning";
+            inner.erase(inner.begin() + idx);
+            root->global.pop_back();
+            root->hash.erase(ch->name);
+            ch->parent = NULL;
+            root->errors.clear();
+            return * ch;
+        }
+        
+        
+        
+        ofNotifyEvent(root->added, ch->name);
         
         /*-- Return vector --*/
         
@@ -477,38 +367,49 @@ public:
     }
     
     int getIndex() {
+        if (!parent) return 0;
         ofxPrecisionGrid * t = this;
         auto it = find(parent->inner.begin(), parent->inner.end(), t);
         if (it != parent->inner.end()) {
             return distance(parent->inner.begin(), it);
             
         } else {
+            
+            ofLogError("Could not find index");
             return 0;
         }
     }
     
-    string & getName(string & s) {
-        if (!parent) return s;
-        ofxPrecisionGrid * t = this;
-        auto it = find(parent->inner.begin(), parent->inner.end(), t);
-        if (it != parent->inner.end()) {
-            int i = distance(parent->inner.begin(), it);
-            s = s + " -> " + ofToString(i);
-            return parent->getName(s);
-        } else {
-            ofLogError("[ofxPrecision]") << "Could not find index in parent";
-            return s;
-        }
+    
+    int getFirstAndInColCount(int i) {
+        if (!parent) return i;
+        
+        bool isFirst = (getIndex() == 0);
+        bool isInCol = (parent->type == PRECISION_COL);
+        
+        if (isFirst && isInCol && parent->parent) i += 1;
+        return parent->getFirstAndInColCount(i);
+    }
+    int getLastAndInColCount(int i) {
+        if (!parent) return i;
+        
+        bool isLast = (getIndex() == parent->inner.size() - 1);
+        bool isInCol = (parent->type == PRECISION_COL);
+        
+        if (isLast && isInCol && parent->parent) i += 1;
+        return parent->getLastAndInColCount(i);
+    }
+    int getLastAndInRowCount(int i) {
+        if (!parent) return i;
+        
+        bool isLast = (getIndex() == parent->inner.size() - 1);
+        bool isInRow = (parent->type == PRECISION_ROW);
+        
+        if (isLast && isInRow) i += 1;
+        return parent->getLastAndInRowCount(i);
     }
     
     
-    ofxPrecisionGrid * getRoot() {
-        if (parent) return parent;
-        return this;
-    }
-    
-    void onAdded( ofxPrecisionGrid & ch ) {
-    }
     
 };
 

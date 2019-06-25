@@ -3,6 +3,7 @@
 //--------------------------------------------------------------
 void ofApp::setup(){
     ofSetFrameRate(120);
+    TIME_SAMPLE_SET_FRAMERATE(120.0f); //specify a target framerate
     ofEnableAlphaBlending();
     ofLog::setAutoSpace(true);
     
@@ -11,12 +12,15 @@ void ofApp::setup(){
     maxIter = 6;
     sel = {};
     
-    grid = new ofxPrecisionGrid(0, NULL);
+    grid = new ofxPrecisionGrid();
     ofRectangle r(200,200,ofGetWidth() - 400, ofGetHeight() - 400);
     grid->set(r);
     generate(grid);
     
-    iso = true;
+    iso = false;
+    
+    ui = new ofxPrecisionUi(grid);
+    
     
 //    grid->set(r);
     
@@ -38,8 +42,21 @@ void ofApp::generate(ofxPrecisionGrid * iter) {
     aa->add(0);
     ofxPrecisionGrid * aaa = &aa->add(0);
     aaa->add(0);
-    aaa->add(0);
-    aa->add(0);
+    ofxPrecisionGrid * aaaa = &aaa->add(1);
+    aaaa->add(0);
+    aaaa->add(0);
+    aaaa->add(0);
+    
+    
+    
+    ofxPrecisionGrid * b = &aa->add(0);
+    b->add(0);
+    ofxPrecisionGrid * bb = &b->add(1);
+    bb->add(0);
+    bb->add(0);
+    bb->add(0);
+    b->add(0);
+    
     grid->add(0);
 //
 //    a->add(1);
@@ -102,9 +119,12 @@ void ofApp::draw(){
     }
     
     grid->draw(iso);
-    int x = 0;
-    int y = 20;
-    draw(grid, x, y);
+    ui->draw();
+    
+    
+//    int x = 0;
+//    int y = 20;
+//    draw(grid, x, y);
     
 //    ofSetColor(255);
 //    ofDrawRectangle(grid->get(sel)->bounds);
@@ -117,26 +137,29 @@ void ofApp::draw(){
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
-//    if (key == 'a') row->add(0);
-//    if (key == 'z') row.setWidth(0, ofRandom(0, 1));
     
-    if (key == OF_KEY_UP) sel.push_back(0);
-    if (key == OF_KEY_DOWN && sel.size() > 0) sel.pop_back();
-    if ( key == OF_KEY_LEFT ) sel.back() = sel.back() - 1;
-    if ( key == OF_KEY_RIGHT ) sel.back() = sel.back() + 1;
+    if (key == OF_KEY_UP) ui->up();
+    if (key == OF_KEY_DOWN) ui->down();
+    if ( key == OF_KEY_LEFT ) ui->prev();
+    if ( key == OF_KEY_RIGHT ) ui->next();
     
     if (key == ' ') {
         iso = !iso;
     }
     if (key == 'z') {
-        delete grid;
-        count = 0;
         
-        grid = new ofxPrecisionGrid(0, NULL);
+        delete ui;
+        delete grid;
+        
+        grid = new ofxPrecisionGrid();
         ofRectangle r(200,200,ofGetWidth() - 400, ofGetHeight() - 400);
         grid->set(r);
         generate(grid);
+        ui = new ofxPrecisionUi(grid);
         
+    }
+    if (key == 'x') {
+        grid->amend();
     }
     
     if (key == 'a' || key == 's') {
@@ -144,19 +167,19 @@ void ofApp::keyPressed(int key){
         if (key == 'a') t = PRECISION_COL;
         if (key == 's') t = PRECISION_ROW;
         
-        for (auto & g : grid->global) {
-            for (auto & a : g->actions) {
-                if (a.type == PRECISION_DR || a.type == PRECISION_DB) {
-                    g->parent->add(t, g->getIndex() + 1);
-                }
-                if (a.type == PRECISION_DL || a.type == PRECISION_DT) {
-                    g->parent->add(t, g->getIndex());
-                }
-                if (a.type == PRECISION_IN) {
-                    g->add(t);
-                }
-            }
-        }
+//        for (auto & g : grid->global) {
+//            for (auto & a : g->actions) {
+//                if (a.type == PRECISION_DR || a.type == PRECISION_DB) {
+//                    g->parent->add(t, g->getIndex() + 1);
+//                }
+//                if (a.type == PRECISION_DL || a.type == PRECISION_DT) {
+//                    g->parent->add(t, g->getIndex());
+//                }
+//                if (a.type == PRECISION_IN) {
+//                    g->add(t);
+//                }
+//            }
+//        }
     }
     
     
@@ -169,24 +192,28 @@ void ofApp::keyReleased(int key){
 
 //--------------------------------------------------------------
 void ofApp::mouseMoved(int x, int y ){
-    grid->moved(x, y);
+    TS_START("moved");
+    ui->moved(x, y);
+    TS_STOP("moved");
 }
 
 //--------------------------------------------------------------
 void ofApp::mouseDragged(int x, int y, int button){
 
-    grid->dragged(x, y);
+    TS_START("dragged");
+    ui->dragged(x, y);
+    TS_STOP("dragged");
 }
 
 //--------------------------------------------------------------
 void ofApp::mousePressed(int x, int y, int button){
 
-    grid->pressed(x, y);
+    ui->pressed(x, y);
 }
 
 //--------------------------------------------------------------
 void ofApp::mouseReleased(int x, int y, int button){
-    grid->released(x, y);
+    ui->released(x, y);
 
 }
 

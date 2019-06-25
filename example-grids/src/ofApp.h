@@ -2,6 +2,8 @@
 
 #include "ofMain.h"
 #include "ofxPrecisionGrid.h"
+#include "ofxPrecisionUi.h"
+#include "ofxTimeMeasurements.h"
 
 class ofApp : public ofBaseApp{
 
@@ -24,6 +26,7 @@ class ofApp : public ofBaseApp{
     
         void draw(ofxPrecisionGrid * g, int x, int y);
         ofxPrecisionGrid * grid;
+        ofxPrecisionUi * ui;
         void generate(ofxPrecisionGrid * iter);
         int depth;
         int maxIter;
