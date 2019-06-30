@@ -27,35 +27,14 @@
  --*/
 
 
-struct ofxPrecisionGridStyle {
-    ofColor defaultColor;
-    ofColor hoverColor;
-    ofColor dropColor;
-    float resizeOffset;
-    float minWidth;
-    float minHeight;
-    ofxPrecisionGridStyle() {
-        defaultColor = ofColor(0,120,120, 255);
-        hoverColor = ofColor(255, 255, 255, 255);
-        dropColor = ofColor(150, 255, 255, 100);
-        resizeOffset = 0;
-        minWidth = 10;
-        minHeight = 10;
-    }
-};
-
-struct ofxPrecisionError {
-    string msg;
-    string name;
-    ofxPrecisionError(string m, string n) {
-        msg = m;
-        name = n;
-    }
-};
+#include "ofxPrecisionStyle.h"
+#include "ofxPrecisionError.h"
 
 
 class ofxPrecisionGrid;
 
+
+#include "ofxPrecisionEvent.h"
 
 class ofxPrecisionGrid {
 public:
@@ -64,8 +43,9 @@ public:
     ofRectangle bounds;
     
     int type;
-    int depth;
     float mH, mW;
+    bool fixed;
+    int depth;
     string name;
     
     vector<int> location;
@@ -75,8 +55,8 @@ public:
     vector<ofxPrecisionError> errors;
     map<string, ofxPrecisionGrid *> hash;
     
-    ofEvent<string> added;
-    ofEvent<string> amended;
+    ofEvent<ofxPrecisionEvent> added;
+    ofEvent<ofxPrecisionEvent> amended;
     
     
     ofxPrecisionGrid *& operator[] (size_t i) {
@@ -91,17 +71,15 @@ public:
         mW = 1;
         type = 0;
         parent = NULL;
-        hash[name] = this;
         global.push_back(this);
         amend();
         
         
     };
-    ofxPrecisionGrid(int t, ofxPrecisionGrid * p) {
+    ofxPrecisionGrid(int t) {
         mH = 1;
         mW = 1;
         type = t;
-        parent = p;
     };
     void set(float x, float y, float w, float h) {
         ofRectangle r(x, y, w, h);
@@ -234,7 +212,6 @@ public:
         for (auto & i : location) {
             ss += ">"+ofToString(i + 1);
         }
-        if (name != ss) getRoot()->hash[ss] = this;
         name = ss;
     }
     
@@ -242,7 +219,9 @@ public:
         
         
         tag();
-        ofNotifyEvent(getRoot()->amended, name);
+        
+        ofxPrecisionEvent e(this);
+        ofNotifyEvent(getRoot()->amended, e);
         
         /*-- iterate width, height and position into pixels --*/
         
@@ -311,19 +290,75 @@ public:
         return errors.size() > 0;
     }
     
-    void erase() {
-//        parent->inner.erase(getIndex());
-    }
-    
     ofxPrecisionGrid * getRoot() {
         if (!parent) return this;
         return parent->getRoot();
     }
     
-    ofxPrecisionGrid & add(int t, int idx = -1) {
+    void remove(vector<ofxPrecisionGrid *> & v, ofxPrecisionGrid * c) {
+        auto idx = std::find(v.begin(), v.end(), c);
+        if (idx != v.end()) v.erase(idx);
+    }
+    
+    void load(ofJson & j) {
         
-        ofxPrecisionGrid * ch = new ofxPrecisionGrid(t, this);
-        ofxPrecisionGrid * root = ch->getRoot();
+        if (this == getRoot()) {
+            
+            global.clear();
+            inner.clear();
+            
+            float x = j["x"].get<float>();
+            float y = j["y"].get<float>();
+            float w = j["width"].get<float>();
+            float h = j["height"].get<float>();
+            set( x, y, w, h );
+            
+        }
+        
+        for (int i = 0; i < j["inner"].size(); i++) {
+            add( j["inner"][i], i);
+        }
+        
+    }
+    
+    void insert() {
+        
+    }
+    
+    void removeReferences() {
+        ofxPrecisionGrid * r = getRoot();
+        remove(r->global, this);
+        remove(parent->inner, this);
+        for (auto & u : inner) u->removeReferences();
+    }
+    
+    ofxPrecisionGrid & add(ofJson & j, int idx = -1) {
+        
+        ofxPrecisionGrid * ch = new ofxPrecisionGrid( j["type"].get<int>() );
+        ch->mH = j["height"].get<int>(); // default multiH
+        ch->mW = j["width"].get<int>(); // default multiWidth
+        ch->type = j["type"].get<int>();
+        ch->parent = nullptr;
+        add(ch, idx);
+        
+        for (int i = 0; i < j["inner"].size(); i++) ch->add( j["inner"][i], i);
+        
+        return * ch;
+    }
+    
+    ofxPrecisionGrid & add(ofxPrecisionGrid * ch, int idx = -1) {
+        
+        ofxPrecisionGrid * root = getRoot();
+        remove(root->global, ch);
+        
+        if (ch->parent) {
+            ofLog() << "A" << ch->parent->inner.size();
+            remove(ch->parent->inner, ch);
+            ofLog() << "B" << ch->parent->inner.size();
+        }
+        
+        ch->parent = this;
+        
         
         if (root->hasError()) {
             ofLogError("ofxPrecisionGrid") << "Trying to add child, but root element has error";
@@ -336,13 +371,16 @@ public:
         
         int d = 0;
         inner.insert(inner.begin() + idx, ch); // insert @ IDX
-        ch->mH = 1; // default multiH
-        ch->mW = 1; // default multiWidth
         ch->depth = getDepth(d); // set depth
         
         /*--- Generate position ---*/
         
         root->global.push_back(ch);
+        
+        /*-- Add children --*/
+        
+        for (auto & u : ch->inner) ch->add(u);
+        
         amend();
         
         /*-- delete new item if it generated errors --*/
@@ -357,11 +395,21 @@ public:
             return * ch;
         }
         
-        
-        
-        ofNotifyEvent(root->added, ch->name);
+        ofxPrecisionEvent e(ch);
+        ofNotifyEvent(root->added, e);
         
         /*-- Return vector --*/
+        
+        return * ch;
+    }
+    
+    ofxPrecisionGrid & add(int t, int idx = -1) {
+        
+        ofxPrecisionGrid * ch = new ofxPrecisionGrid(t);
+        ch->mH = 1; // default multiH
+        ch->mW = 1; // default multiWidth
+        ch->parent = nullptr;
+        add(ch, idx);
         
         return * ch;
     }
@@ -407,6 +455,28 @@ public:
         
         if (isLast && isInRow) i += 1;
         return parent->getLastAndInRowCount(i);
+    }
+    
+    ofJson json() {
+        
+        ofJson j;
+        
+        if (this == getRoot()) {
+            j["x"] = bounds.x;
+            j["y"] = bounds.y;
+            j["width"] = bounds.width;
+            j["height"] = bounds.height;
+        } else {
+            j["type"] = type;
+            j["width"] = mW;
+            j["height"] = mH;
+        }
+        
+        for (int i = 0; i < inner.size(); i++) {
+            j["inner"][i] = inner[i]->json();
+        }
+        
+        return j;
     }
     
     

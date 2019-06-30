@@ -80,6 +80,8 @@ void ofApp::generate(ofxPrecisionGrid * iter) {
 //        ofxPrecisionRow * n = &iter->add( t );
 //        generate(n);
 //    }
+    
+    json = grid->json();
 }
 
 //--------------------------------------------------------------
@@ -110,6 +112,83 @@ void ofApp::draw(){
     int w = ofGetWidth()/2;
     int h = ofGetHeight()/2;
     
+    bool isPortrait = grid->bounds.width < grid->bounds.height;
+    
+    float col = grid->bounds.width;
+    float row = grid->bounds.height;
+    
+    if (isPortrait) {
+        col /= 12;
+        row /= 18;
+    } else {
+        col /= 18;
+        row /= 12;
+    }
+    
+    float min = 8;
+    float cm = 1;//(int) ( (int)col / min );
+    float rm = 1;//(int) ( (int)row / min );
+    
+    if (cm < 1) cm = 0;
+    if (rm < 1) rm = 0;
+    
+//    ofLog() << cm << rm;
+    
+    
+    float x = grid->bounds.x;
+    float y = grid->bounds.y;
+    float width = grid->bounds.width;
+    float height = grid->bounds.height;
+    
+    ofNoFill();
+    ofSetLineWidth(1);
+    
+    for (int i = 0; i <= ofGetWidth() / (col / cm) ; i ++) {
+
+        float ix = ( (col/cm) * i) + fmod(x,col);
+        ofPoint a( ix, 0 );
+        ofPoint b( ix, ofGetHeight() );
+        
+        ofSetColor(255,255,255, 20);
+        if (i%2 == 0) ofSetColor(255,255,255, 40);
+        ofDrawLine(a, b);
+    }
+    for (int i = 0; i <= ofGetHeight() / (row / rm); i ++) {
+
+        float iy = ( (row/rm) * i) + fmod(y,row);
+        ofPoint a( 0, iy );
+        ofPoint b( ofGetWidth(), iy );
+        
+        ofSetColor(255,255,255, 20);
+        if (i%4 == 0) ofSetColor(255,255,255, 40);
+        ofDrawLine(a, b);
+    }
+    
+//    ofFill();
+//    ofSetColor(255,255,255, 150);
+//    for (int xx = 0; xx <= ofGetWidth() / col; xx ++) {
+//
+//        for (int yy = 0; yy <= ofGetHeight() / row; yy ++) {
+//
+//            float ix = ( col * xx) + fmod(x,col);
+//            float iy = ( row * yy) + fmod(y,row);
+//            if (!grid->bounds.inside(ix,iy)) ofDrawCircle(ix, iy, 1);
+//        }
+//    }
+//    ofFill();
+//    ofSetColor(255,255,255, 150);
+//    for (int xx = 0; xx <= ofGetWidth() / col; xx ++) {
+//
+//        for (int yy = 0; yy <= ofGetHeight() / col; yy ++) {
+//
+//            float ix = ( col * xx) + fmod(x,col);
+//            float iy = ( col * yy) + fmod(y,col);
+//            if (!grid->bounds.inside(ix,iy)) ofDrawCircle(ix, iy, 1);
+//        }
+//    }
+    
+    /*-- draw grids and ui --*/
+    
     if (iso) {
         ofPushMatrix();
         ofTranslate(w, h);
@@ -121,16 +200,7 @@ void ofApp::draw(){
     grid->draw(iso);
     ui->draw();
     
-    
-//    int x = 0;
-//    int y = 20;
-//    draw(grid, x, y);
-    
-//    ofSetColor(255);
-//    ofDrawRectangle(grid->get(sel)->bounds);
-    
     if (iso) ofPopMatrix();
-    
     
     
 }
@@ -144,20 +214,22 @@ void ofApp::keyPressed(int key){
     if ( key == OF_KEY_RIGHT ) ui->next();
     
     if (key == ' ') {
-        iso = !iso;
+//        ofLog() << grid->json();
+        
+//        iso = !iso;
     }
     if (key == 'z') {
         
+//        ofJson j = grid->json();
         delete ui;
-        delete grid;
+//        delete grid;
         
         grid = new ofxPrecisionGrid();
-        ofRectangle r(200,200,ofGetWidth() - 400, ofGetHeight() - 400);
-        grid->set(r);
-        generate(grid);
+        grid->load(json);
         ui = new ofxPrecisionUi(grid);
         
     }
+    
     if (key == 'x') {
         grid->amend();
     }
@@ -182,12 +254,13 @@ void ofApp::keyPressed(int key){
 //        }
     }
     
+    ui->keypress(key);
     
 }
 
 //--------------------------------------------------------------
 void ofApp::keyReleased(int key){
-
+    ui->keyrelease(key);
 }
 
 //--------------------------------------------------------------

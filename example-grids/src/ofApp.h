@@ -34,6 +34,7 @@ class ofApp : public ofBaseApp{
         bool iso;
         string name;
         vector<int> sel;
+    ofJson json;
     
         
 };
