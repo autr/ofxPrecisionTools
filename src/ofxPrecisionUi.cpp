@@ -5,6 +5,7 @@
 ofxPrecisionUi::ofxPrecisionUi(ofxPrecisionGrid * u) {
     unit = u;
     mode = PRECISION_M_RESIZE;
+    currently = CURRENTLY_NOWT;
     
     binChoice = -1;
     bin = new ofxPrecisionGrid();
@@ -19,8 +20,7 @@ ofxPrecisionUi::ofxPrecisionUi(ofxPrecisionGrid * u) {
         areas[u] = a;
     }
     
-    ofAddListener(unit->added, this, &ofxPrecisionUi::onAdded);
-    ofAddListener(unit->amended, this, &ofxPrecisionUi::onAmended);
+    ofAddListener(unit->event, this, &ofxPrecisionUi::onAction);
 }
 
 void ofxPrecisionUi::keypress(int k) {
@@ -33,10 +33,9 @@ void ofxPrecisionUi::keypress(int k) {
     
     if (k == OF_KEY_BACKSPACE) {
         actions.clear();
-        current->removeReferences();
-        unit->amend();
-        delete current;
+        current->remove();
         current = nullptr;
+        unit->amend();
     }
 }
 void ofxPrecisionUi::keyrelease(int k) {
@@ -97,18 +96,28 @@ void ofxPrecisionUi::select(ofxPrecisionGrid * u) {
     current = u;
 }
 
-void ofxPrecisionUi::onAdded(ofxPrecisionEvent & e) {
+void ofxPrecisionUi::onAction(ofxPrecisionEvent & e) {
     
-    select(e.u);
-}
-void ofxPrecisionUi::onAmended(ofxPrecisionEvent & e) {
+    if (e.type == "clear" ) {
+        areas.clear();
+    }
+    if (e.type == "loaded" ) {
+        current = nullptr;
+    }
     
-    ofxPrecisionAreas a( e.u );
-    areas[e.u] = a;
+    if (e.type == "added") select(e.u);
+    
+    if (e.type == "amended") {
+        ofxPrecisionAreas a( e.u );
+        areas[e.u] = a;
+    }
+    if (e.type == "removed") {
+        areas.erase(e.u);
+    }
     
 }
 
-void ofxPrecisionUi::draw() {
+void ofxPrecisionUi::draw(bool iso) {
     
     bin->draw();
     
@@ -124,16 +133,22 @@ void ofxPrecisionUi::draw() {
     ofFill();
     
     if (current) {
+        if (iso) {
+        ofPushMatrix();
+        int d = current->depth();
+        ofTranslate(0, 0, d * 80 );
+        }
         ofxPrecisionGrid * curr = current;
         ofDrawRectangle(curr->bounds);
         ofNoFill();
+        if (iso) ofPopMatrix();
     }
     
     
     for (auto & act : actions) {
         
         ofxPrecisionGrid * u = act.unit;
-        int d = u->depth;
+        int d = u->depth();
         
         ofPushMatrix();
         
@@ -206,7 +221,7 @@ ofxPrecisionGrid * ofxPrecisionUi::deepest(int x, int y) {
         
         /*-- find deepest --*/
         
-        if (u->bounds.inside(x, y) && u->depth > d) {
+        if (u->bounds.inside(x, y) && u->depth() > d) {
             o = u;
         }
     }
@@ -216,6 +231,8 @@ ofxPrecisionGrid * ofxPrecisionUi::deepest(int x, int y) {
 
 void ofxPrecisionUi::released(int x, int y) {
     
+    /*-- add element --*/
+    
     if (binChoice >= 0) {
         
         released_drop( x, y );
@@ -223,14 +240,18 @@ void ofxPrecisionUi::released(int x, int y) {
         return;
     }
     
-//    if (mode == PRECISION_M_MOVE) {
-//        released_move( x, y);
-//    }
+    /*-- move element --*/
+    
+    if (mode == PRECISION_M_MOVE) {
+        released_move( x, y);
+    }
+    
+    /*-- select element --*/
     
     released_select( x, y );
     
-    actions.clear();
     moved(x, y);
+    actions.clear();
 }
 
 void ofxPrecisionUi::released_drop( int x, int y ) {
@@ -353,11 +374,12 @@ void ofxPrecisionUi::released_move( int x, int y ) {
     ofPoint p = pressLast;
     float t = ofGetElapsedTimef();
     
+    /*-- moving drag and drop --*/
+    
     for (auto & a : actions) {
         
         if (unit->name != current->name) {
             
-            ofxPrecisionGrid * p = a.unit->parent;
             
             int bef = a.unit->getIndex();
             int aft = a.unit->getIndex() + 1;
@@ -366,44 +388,34 @@ void ofxPrecisionUi::released_move( int x, int y ) {
             
             if (isDropping) {
                 
-                ofLog() << "clearing";
+                
+                bool isInside = (a.type == PRECISION_IN);
+                bool isAfter = (a.type == PRECISION_DB || a.type == PRECISION_DR);
+                bool isBefore = (a.type == PRECISION_DL || a.type == PRECISION_DT);
+                int pos = (isAfter) ? a.unit->getIndex() + 1 : a.unit->getIndex();
+                ofxPrecisionGrid * target = (isInside) ? a.unit : a.unit->parent;
+                
                 actions.clear();
-                current->removeReferences();
+                
+                
+                target->move(current, pos);
                 unit->amend();
-            }
-            
-            if (current != p) {
-                
-                if (a.type == PRECISION_DB || a.type == PRECISION_DR) {
-                    ofLog() << "~R / ~B";
-                    p->add(current, aft);
-                    return;
-                }
-                if (a.type == PRECISION_DL || a.type == PRECISION_DT) {
-                    ofLog() << "~T / ~ L";
-                    p->add(current, bef);
-                    unit->amend();
-                    return;
-                }
                 
             }
             
-            if (current != a.unit) {
-                if (a.type == PRECISION_IN) {
-                    ofLog() << "~In";
-                    a.unit->add(current);
-                    unit->amend();
-                    return;
-                }
-            }
         }
     }
     
-    isMoving = false;
+    moveActive = false;
     
 }
 
 void ofxPrecisionUi::dragged(int x, int y) {
+    
+    bool isMoving = (moveActive && mode == 3);
+    bool isShift = ofGetKeyPressed(OF_KEY_SHIFT);
+    bool isAlt = ofGetKeyPressed(OF_KEY_ALT);
+    
     
     if (binChoice != -1 || isMoving) {
         
@@ -413,19 +425,18 @@ void ofxPrecisionUi::dragged(int x, int y) {
         return;
     }
     
-    bool isShift = ofGetKeyPressed(OF_KEY_SHIFT);
-    bool isAlt = ofGetKeyPressed(OF_KEY_ALT);
-    
-    if (unit->hasError() ) {
-        x = lastDragged.x;
-        y = lastDragged.y;
-    }
+//    if (unit->hasError() ) {
+//        x = lastDragged.x;
+//        y = lastDragged.y;
+//    }
     
     
     for (auto & a : actions) {
         
         
         if (!a.unit->parent) {
+            
+            /*-- resize container --*/
             
             ofRectangle rr = a.oBounds;
             float cx = a.oPress.x - x;
@@ -438,6 +449,8 @@ void ofxPrecisionUi::dragged(int x, int y) {
             
         } else {
         
+            /*-- resize element --*/
+            
             float pW = a.unit->parent->bounds.width; // parent width
             float pH = a.unit->parent->bounds.height; // parent height
             float offX = (a.oPress.x - x) / pW; // X multiple
@@ -504,14 +517,14 @@ void ofxPrecisionUi::dragged(int x, int y) {
         
     } // for each action
     
-    if (!unit->hasError())  {
-        lastDragged.x = x;
-        lastDragged.y = y;
-    } else {
-        unit->errors.clear();
-        dragged(lastDragged.x, lastDragged.y);
-    }
-    
+//    if (!unit->hasError())  {
+//        lastDragged.x = x;
+//        lastDragged.y = y;
+//    } else {
+//        unit->errors.clear();
+//        dragged(lastDragged.x, lastDragged.y);
+//    }
+//
     
 }
 
@@ -522,16 +535,19 @@ void ofxPrecisionUi::pressed(int x, int y) {
     for (int i = 0; i < bin->inner.size(); i++) {
         if (bin->inner[i]->bounds.inside(x,y)) {
             binChoice = i;
+            currently = CURRENTLY_DROPPING;
             return;
         }
     }
     
     /*-- select current --*/
     
-    // TODO: moving
-//    if (current) {
-//        if (current->bounds.inside(x,y)) isMoving = true;
-//    }
+    if (current && mode == 3) {
+        if (current->bounds.inside(x,y)) {
+            currently = CURRENTLY_DROPPING;
+            moveActive = true;
+        }
+    }
     
     
     
@@ -558,44 +574,26 @@ void ofxPrecisionUi::moved(int x, int y) {
     
     actions.clear();
     float padd = 5;
-    float rszo = unit->style.resizeOffset;
     
 
     for (auto & g : unit->global) {
         
-        /*-- offset by depth --*/
+        ofRectangle b = g->bounds;
+        ofPoint p(x, y);
         
-        int d = g->depth;
-        ofPoint p( x + (d * -10) , y + (d * -10) );
-        
-        vector<float> mWidths = g->getWidths();
-        vector<float> mHeights = g->getHeights();
-        
-        ofRectangle b(g->bounds);
-        
-        /*-- Offset bounds by resizing offset --*/
-        
-        if (mode == PRECISION_M_RESIZE) {
-        
-            b.x += rszo * d;
-            b.y += rszo * d;
-            
-        }
-        
-        ofxPrecisionGrid * n = g;
-        
-        bool isLast = areas[n].isLast;
-        bool isFirst = areas[n].isFirst;
-        bool isInCol = areas[n].isInCol;
-        bool isInRow = areas[n].isInRow;
+        bool isLast = areas[g].isLast;
+        bool isFirst = areas[g].isFirst;
+        bool isInCol = areas[g].isInCol;
+        bool isInRow = areas[g].isInRow;
         bool noInner = g->inner.size() == 0;
-        bool dragDrop = ( binChoice != -1 );
+        bool binDrop = ( binChoice != -1 );
+        bool isMoving = (moveActive && mode == 3);
         
         
-        bool inR = areas[n].r.inside(x, y);
-        bool inB = areas[n].b.inside(x, y);
-        bool inL = areas[n].l.inside(x, y);
-        bool inT = areas[n].t.inside(x, y);
+        bool inR = areas[g].r.inside(x, y);
+        bool inB = areas[g].b.inside(x, y);
+        bool inL = areas[g].l.inside(x, y);
+        bool inT = areas[g].t.inside(x, y);
         
         bool inH = (y > b.y - padd && y < b.y + b.height + padd);
         bool inW = (x > b.x - padd && x < b.x + b.width + padd);
@@ -604,18 +602,34 @@ void ofxPrecisionUi::moved(int x, int y) {
         /*-- rectangle exluding edges --*/
         
         ofRectangle intra;
-        intra.x = areas[n].l.getBottomRight().x;
-        intra.y = areas[n].t.getBottomLeft().y;
-        intra.width = areas[n].r.getTopLeft().x - intra.x;
-        intra.height = areas[n].b.getTopRight().y - intra.y;
+        intra.x = areas[g].l.getBottomRight().x;
+        intra.y = areas[g].t.getBottomLeft().y;
+        intra.width = areas[g].r.getTopLeft().x - intra.x;
+        intra.height = areas[g].b.getTopRight().y - intra.y;
+        
+        
+        vector<float> mWidths;
+        vector<float> mHeights;
         
         /*-- dragging and dropping --*/
         
-        if (dragDrop || isMoving) {
+        if (binDrop || isMoving) {
+            
+            bool dropInside = intra.inside(x, y) && noInner;
+            bool dropRight = inR && inH && isInRow;
+            bool dropLeft = inL && inH && isInRow;
+            bool dropBottom = inB && inW && isInCol;
+            bool dropTop = inT && inW && isInCol && isFirst;
+            
+            if (dropInside || dropRight || dropLeft || dropBottom || dropTop) {
+                
+                mWidths = g->getWidths();
+                mHeights = g->getHeights();
+            }
             
             /*-- drop area --*/
             
-            if (intra.inside(x, y) && noInner) {
+            if (dropInside) {
                 ofxPrecisionAction a(PRECISION_IN, g, p, mWidths, mHeights);
                 actions.push_back(a);
             }
@@ -623,40 +637,52 @@ void ofxPrecisionUi::moved(int x, int y) {
             
             /*-- drop right --*/
             
-            if (inR && inH && isInRow) {
+            if (dropRight) {
                 ofxPrecisionAction a(PRECISION_DR, g, p, mWidths, mHeights);
                 actions.push_back(a);
             }
 
             /*-- drop left --*/
 
-            if (inL && inH && isInRow) {
+            if (dropLeft) {
                 ofxPrecisionAction a(PRECISION_DL, g, p, mWidths, mHeights);
                 actions.push_back(a);
             }
         
             /*-- drop bottom --*/
             
-            if (inB && inW && isInCol) {
+            if (dropBottom) {
                 ofxPrecisionAction a(PRECISION_DB, g, p, mWidths, mHeights);
                 actions.push_back(a);
             }
 
             /*-- drop top --*/
 
-            if (inT && inW && isInCol && isFirst) {
+            if (dropTop) {
                 ofxPrecisionAction a(PRECISION_DT, g, p, mWidths, mHeights);
                 actions.push_back(a);
             }
         
             
-        } else {
+        }
+        
+        
+        if (mode == 2) {
 
+            bool resizeHeight = inB && inW && !isLast && !isInRow;
+            bool resizeWidth = inR && inH && !isLast && !isInCol;
+            
+            
+            if (resizeHeight || resizeWidth) {
+                
+                mWidths = g->getWidths();
+                mHeights = g->getHeights();
+            }
 
             /*-- height drag --*/
 
 
-            if (inB && inW && !isLast && !isInRow) {
+            if (resizeHeight) {
                 vector<float> mWidths = g->getWidths();
                 vector<float> mHeights = g->getHeights();
                 ofxPrecisionAction a(PRECISION_H, g, p, mWidths, mHeights);
@@ -665,7 +691,7 @@ void ofxPrecisionUi::moved(int x, int y) {
 
             /*-- width drag --*/
 
-            if (inR && inH && !isLast && !isInCol) {
+            if (resizeWidth) {
                 ofxPrecisionAction a(PRECISION_W, g, p, mWidths, mHeights);
                 actions.push_back(a);
             }

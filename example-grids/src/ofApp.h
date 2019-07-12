@@ -3,7 +3,9 @@
 #include "ofMain.h"
 #include "ofxPrecisionGrid.h"
 #include "ofxPrecisionUi.h"
-#include "ofxTimeMeasurements.h"
+#include "ofxPrecisionUndo.h"
+#include "ofxPrecisionCursor.h"
+//#include "ofxTimeMeasurements.h"
 
 class ofApp : public ofBaseApp{
 
@@ -27,6 +29,8 @@ class ofApp : public ofBaseApp{
         void draw(ofxPrecisionGrid * g, int x, int y);
         ofxPrecisionGrid * grid;
         ofxPrecisionUi * ui;
+        ofxPrecisionUndo * undo;
+        ofxPrecisionCursor * cursor;
         void generate(ofxPrecisionGrid * iter);
         int depth;
         int maxIter;
@@ -34,7 +38,8 @@ class ofApp : public ofBaseApp{
         bool iso;
         string name;
         vector<int> sel;
-    ofJson json;
+        ofJson json;
+        int mx, my;
     
         
 };

@@ -1,2 +1,3 @@
 ofxPrecisionTools
+ofxSvg
 ofxTimeMeasurements

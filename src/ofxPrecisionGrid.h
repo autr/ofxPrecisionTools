@@ -45,7 +45,6 @@ public:
     int type;
     float mH, mW;
     bool fixed;
-    int depth;
     string name;
     
     vector<int> location;
@@ -53,7 +52,7 @@ public:
     vector<ofxPrecisionGrid *> inner;
     vector<ofxPrecisionGrid *> global;
     vector<ofxPrecisionError> errors;
-    map<string, ofxPrecisionGrid *> hash;
+    ofEvent<ofxPrecisionEvent> event;
     
     ofEvent<ofxPrecisionEvent> added;
     ofEvent<ofxPrecisionEvent> amended;
@@ -70,13 +69,17 @@ public:
         mH = 1;
         mW = 1;
         type = 0;
-        parent = NULL;
+        parent = nullptr;
         global.push_back(this);
         amend();
         
         
+        
     };
     ofxPrecisionGrid(int t) {
+        
+        /*-- child --*/
+        
         mH = 1;
         mW = 1;
         type = t;
@@ -86,7 +89,7 @@ public:
         set(r);
     }
     void set(ofRectangle & r) {
-//        name = getName(name);
+        
         float p = 0;
         r.x += p;
         r.y += p;
@@ -123,16 +126,16 @@ public:
     vector<float> getWidths() {
         vector<float> w;
         if (!parent) return w;
-        for (auto & u : parent->inner) {
-            w.push_back(u->mW);
+        for (int i = 0; i < parent->inner.size(); i++) {
+            w.push_back(parent->inner[i]->mW);
         }
         return w;
     }
     vector<float> getHeights() {
         vector<float> h;
         if (!parent) return h;
-        for (auto & u : parent->inner) {
-            h.push_back(u->mH);
+        for (int i = 0; i < parent->inner.size(); i++) {
+            h.push_back(parent->inner[i]->mH);
         }
         return h;
     }
@@ -149,11 +152,8 @@ public:
         ofSetLineWidth(2);
         
         ofPushMatrix();
-        int d = depth + 1;
-        float o = style.resizeOffset;
-        ofTranslate(d * o, d * o, 0 );
         if (iso) {
-            ofTranslate(0,0,d * 60);
+            ofTranslate(0,0,depth() * 80);
         }
         
         
@@ -171,11 +171,14 @@ public:
             ofDrawLine( bounds.getTopRight(), bounds.getBottomLeft() );
         }
         
+        ofSetColor(255);
+        if (inner.size() > 0) ofDrawBitmapString( ofToString( inner.size() ) , bounds.getCenter() );
+        
         if (parent && iso) {
             ofSetColor(255,255,255,100);
             ofVec3f p = parent->bounds.getCenter();
             ofVec3f c = bounds.getCenter();
-            p.z -= 60;
+            p.z -= 80;
             ofDrawLine(c, p);
         }
         
@@ -188,12 +191,17 @@ public:
         ofPopMatrix();
         
         int i = 0;
-        d += 1;
         for (auto & ch : inner) ch->draw(iso);
         
         
     }
     vector<int> & position(vector<int> & pos) {
+        
+        if (parent == this) {
+            ofLogError("position() loop");
+            return;
+        }
+        
         if (!parent) {
             return pos;
         }
@@ -220,8 +228,8 @@ public:
         
         tag();
         
-        ofxPrecisionEvent e(this);
-        ofNotifyEvent(getRoot()->amended, e);
+        ofxPrecisionEvent e("amended", this);
+        ofNotifyEvent(getRoot()->event, e);
         
         /*-- iterate width, height and position into pixels --*/
         
@@ -271,7 +279,6 @@ public:
             bool isDiff = ( (fx != cx) || (fy != cy) || (fw != cw) || (fh != ch) );
             
             if (isDiff) c->set(fx, fy, fw, fh);
-//            ofNotifyEvent(getRoot()->amended, c->name);
             
             tX += c->bounds.width;
             tY += c->bounds.height;
@@ -280,10 +287,11 @@ public:
     }
     
     
-    int & getDepth(int & d) {
-        if (!parent) return d;
-        d += 1;
-        return parent->getDepth(d);
+    int depth(int d = -1) {
+//        if (d == -1) d = 0;
+//        if (!parent) return d;
+//        d += 1;
+        return location.size();//parent->depth(d);
     }
     
     bool hasError() {
@@ -302,10 +310,11 @@ public:
     
     void load(ofJson & j) {
         
+        
+        clear();
+        
+        
         if (this == getRoot()) {
-            
-            global.clear();
-            inner.clear();
             
             float x = j["x"].get<float>();
             float y = j["y"].get<float>();
@@ -318,25 +327,66 @@ public:
         for (int i = 0; i < j["inner"].size(); i++) {
             add( j["inner"][i], i);
         }
+        ofxPrecisionEvent e("loaded", this);
+        ofNotifyEvent(getRoot()->event, e);
         
     }
     
-    void insert() {
+    void clear() {
         
-    }
-    
-    void removeReferences() {
         ofxPrecisionGrid * r = getRoot();
+        ofxPrecisionEvent e("clear", this);
+        ofNotifyEvent(r->event, e);
+        for (auto & u : collect() ) {
+            remove( r->global, u);
+            delete u;
+        }
+        inner.clear();
+        global.push_back(this);
+    }
+    
+    
+    void remove() {
+        ofxPrecisionGrid * r = getRoot();
+        ofxPrecisionEvent e("removed", this);
+        ofNotifyEvent(r->event, e);
+        for (auto & u : collect() ) {
+            remove( r->global, u);
+            delete u;
+        }
+        if (parent) remove(parent->inner, this);
         remove(r->global, this);
-        remove(parent->inner, this);
-        for (auto & u : inner) u->removeReferences();
+        delete this;
+    }
+    
+    vector<ofxPrecisionGrid *> collect() {
+        vector<ofxPrecisionGrid *> a;
+        a.insert( a.end(), inner.begin(), inner.end() );
+        for (auto & u : inner) {
+            vector<ofxPrecisionGrid *> b = u->collect();
+            a.insert( a.end(), b.begin(), b.end() );
+        }
+        return a;
+    }
+    
+    void move( ofxPrecisionGrid * u , int idx = -1) {
+        vector<ofxPrecisionGrid *> all = u->collect();
+        auto i = std::find(all.begin(), all.end(), this);
+        if (i != all.end()) {
+            ofLogNotice() << "Cannot move element into self";
+            return;
+        }
+        
+        
+        if (u->parent) remove( u->parent->inner, u ); // remove from old parent
+        add( u, idx ); // add here
     }
     
     ofxPrecisionGrid & add(ofJson & j, int idx = -1) {
         
         ofxPrecisionGrid * ch = new ofxPrecisionGrid( j["type"].get<int>() );
-        ch->mH = j["height"].get<int>(); // default multiH
-        ch->mW = j["width"].get<int>(); // default multiWidth
+        ch->mH = j["height"].get<float>(); // default multiH
+        ch->mW = j["width"].get<float>(); // default multiWidth
         ch->type = j["type"].get<int>();
         ch->parent = nullptr;
         add(ch, idx);
@@ -351,52 +401,21 @@ public:
         ofxPrecisionGrid * root = getRoot();
         remove(root->global, ch);
         
-        if (ch->parent) {
-            ofLog() << "A" << ch->parent->inner.size();
-            remove(ch->parent->inner, ch);
-            ofLog() << "B" << ch->parent->inner.size();
-        }
-        
         ch->parent = this;
-        
-        
-        if (root->hasError()) {
-            ofLogError("ofxPrecisionGrid") << "Trying to add child, but root element has error";
-            return * ch;
-        }
-        
         /*-- Insert new rect --*/
         
         if (idx > inner.size() || idx < 0) idx = inner.size(); // safe IDX
         
         int d = 0;
         inner.insert(inner.begin() + idx, ch); // insert @ IDX
-        ch->depth = getDepth(d); // set depth
         
         /*--- Generate position ---*/
         
         root->global.push_back(ch);
-        
-        /*-- Add children --*/
-        
-        for (auto & u : ch->inner) ch->add(u);
-        
         amend();
         
-        /*-- delete new item if it generated errors --*/
-        
-        if (root->hasError()) {
-            ofLogError("ofxPrecisionGrid") << "Added child, but this causes dimensions error ... deleting and returning";
-            inner.erase(inner.begin() + idx);
-            root->global.pop_back();
-            root->hash.erase(ch->name);
-            ch->parent = NULL;
-            root->errors.clear();
-            return * ch;
-        }
-        
-        ofxPrecisionEvent e(ch);
-        ofNotifyEvent(root->added, e);
+        ofxPrecisionEvent e("added", ch);
+        ofNotifyEvent(root->event, e);
         
         /*-- Return vector --*/
         
@@ -479,6 +498,12 @@ public:
         return j;
     }
     
+    bool inside( ofxPrecisionGrid * u ) {
+        if ( u == this ) return true;
+        bool b = false;
+        for (auto & el : inner) if (el->inside( u )) b = true;
+        return b;
+    }
     
     
 };

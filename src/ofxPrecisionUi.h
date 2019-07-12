@@ -15,16 +15,24 @@
 #define PRECISION_M_MOVE 3
 #define PRECISION_M_MARGIN 4
 
+#define CURRENTLY_NOWT 0
+#define CURRENTLY_HOVERING 1
+#define CURRENTLY_DROPPING 2
+#define CURRENTLY_RESIZING 3
+
 class ofxPrecisionUi {
 public:
     
     /*-- mode --*/
 
     int mode = 1;
+    int currently;
     
     /*-- drag + drop --*/
 
-    bool isMoving = false;
+    bool moveActive = false;
+    ofPoint movePos;
+    
     ofxPrecisionGrid * bin;
     int binChoice;
     
@@ -78,12 +86,11 @@ public:
 
     /*-- callback events --*/
 
-    void onAdded(ofxPrecisionEvent & e);
-    void onAmended(ofxPrecisionEvent & e);
+    void onAction(ofxPrecisionEvent & e);
 
     /*-- draw --*/
     
-    void draw();
+    void draw(bool iso);
 
     /*-- util --*/
     

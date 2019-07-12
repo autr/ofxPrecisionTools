@@ -2,7 +2,9 @@
 
 struct ofxPrecisionEvent {
     ofxPrecisionGrid * u;
-    ofxPrecisionEvent( ofxPrecisionGrid * uu ) {
+    string type;
+    ofxPrecisionEvent( string t, ofxPrecisionGrid * uu ) {
+        type = t;
         u = uu;
     }
 };
