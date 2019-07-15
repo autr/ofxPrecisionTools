@@ -1,3 +1,4 @@
+ofxEasing
 ofxPrecisionTools
 ofxSvg
 ofxTimeMeasurements

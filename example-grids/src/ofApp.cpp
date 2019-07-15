@@ -34,6 +34,8 @@ void ofApp::setup(){
     
     ofBackground(0);
     
+    scroll.outer.set( 200, 200, 400, 400);
+    scroll.inner.set( 200, 200, 400, 1200);
     
 }
 
@@ -217,6 +219,21 @@ void ofApp::draw(){
         
     }
     
+    scroll.update();
+    
+    ofNoFill();
+    ofSetColor(255,0,0);
+    ofPushMatrix();
+//    ofTranslate(100,100);
+    ofDrawRectangle( scroll.outer );
+    ofDrawRectangle( scroll.inner );
+    
+    ofFill();
+//    ofDrawRectangle( scroll.getScrollBar() );
+    
+    ofPopMatrix();
+    
+    
 }
 
 //--------------------------------------------------------------
@@ -270,19 +287,25 @@ void ofApp::mouseMoved(int x, int y ){
 //--------------------------------------------------------------
 void ofApp::mouseDragged(int x, int y, int button){
 
+    scroll.dragged(x, y);
 //    TS_START("dragged");
     ui->dragged(x, y);
 //    TS_STOP("dragged");
 }
 
+void ofApp::mouseScrolled( ofMouseEventArgs& e) {
+    scroll.scrolled( e );
+}
 //--------------------------------------------------------------
 void ofApp::mousePressed(int x, int y, int button){
 
+    scroll.pressed(x, y);
     ui->pressed(x, y);
 }
 
 //--------------------------------------------------------------
 void ofApp::mouseReleased(int x, int y, int button){
+    scroll.released(x, y);
     ui->released(x, y);
 
 }
