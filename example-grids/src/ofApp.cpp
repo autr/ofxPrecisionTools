@@ -21,11 +21,19 @@ void ofApp::setup(){
     
     iso = false;
     
-    ui = new ofxPrecisionUi(grid);
+    bin = new ofxPrecisionGrid();
+    bin->set(20,20,20,80);
+    bin->add(0);
+    bin->add(0);
+    bin->add(0);
+    bin->add(0);
+    
+    
+    
+    ui = new ofxPrecisionUi(grid, bin);
     
     ofBackground(0);
     
-//    grid->set(r);
     
 }
 
@@ -179,6 +187,16 @@ void ofApp::draw(){
     
     cursor->draw( ofGetMouseX(), ofGetMouseY() );
     
+    
+    string m = "CURRENTLY_NOWT";
+    if ( ui->is(CURRENTLY_NOWT) ) m = "CURRENTLY_NOWT";
+    if ( ui->is(CURRENTLY_SELECTING) ) m = "CURRENTLY_SELECTING";
+    if ( ui->is(CURRENTLY_ADDING) ) m = "CURRENTLY_ADDING";
+    if ( ui->is(CURRENTLY_RESIZING) ) m = "CURRENTLY_RESIZING";
+    if ( ui->is(CURRENTLY_MOVING) ) m = "CURRENTLY_MOVING";
+    if ( ui->is(CURRENTLY_HOVERING) ) m = "CURRENTLY_HOVERING";
+    ofDrawBitmapStringHighlight( m, 20, 280);
+    
     if (ui->current) {
     
         ofDrawBitmapStringHighlight( "Location:" , 20, 300 );
@@ -196,18 +214,9 @@ void ofApp::draw(){
         }
         ofDrawBitmapStringHighlight( gl , 20, 400 );
         
-        string m = "NOWT";
-        if ( ui->is(CURRENTLY_NOWT) ) m = "NOWT";
-        if ( ui->is(CURRENTLY_SELECTING) ) m = "SELECTING";
-        if ( ui->is(CURRENTLY_ADDING) ) m = "ADDING";
-        if ( ui->is(CURRENTLY_RESIZING) ) m = "RESIZING";
-        if ( ui->is(CURRENTLY_MOVING) ) m = "MOVING";
-        ofDrawBitmapStringHighlight( m, 20, 280);
         
     }
-//    ofDrawBitmapStringHighlight( ofToString( ui->current->depth() ) , 20, 300 );
-//    ofDrawBitmapStringHighlight( ofToString( ui->current->depth() ) , 20, 300 );
-//    ofDrawBitmapStringHighlight( ofToString( ui->current->depth() ) , 20, 300 );
+    
 }
 
 //--------------------------------------------------------------
@@ -238,7 +247,7 @@ void ofApp::keyPressed(int key){
         grid->load(j);
     }
     if (key == 'f' ) {
-        grid->amend();
+        if (ui->current) ui->current->fixed = !ui->current->fixed;
     }
     
     ui->keypress(key);

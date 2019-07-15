@@ -44,6 +44,7 @@ public:
     
     int type;
     float mH, mW;
+//    float fX, fY, fW, fH;
     bool fixed;
     string name;
     
@@ -69,6 +70,7 @@ public:
         mH = 1;
         mW = 1;
         type = 0;
+        fixed = false;
         parent = nullptr;
         global.push_back(this);
         amend();
@@ -82,6 +84,7 @@ public:
         
         mH = 1;
         mW = 1;
+        fixed = false;
         type = t;
     };
     void set(float x, float y, float w, float h) {
@@ -243,19 +246,43 @@ public:
         float tW = 0;
         float tH = 0;
         
-        /*-- get max size multiples --*/
+        bool isCol = (type == PRECISION_COL || type == PRECISION_OBJ);
+        bool isRow = (type == PRECISION_ROW);
+        
         
         for (auto & c : inner) {
-            tW += c->mW;
-            tH += c->mH;
+            
+            bool isFixed = c->fixed;
+            
+            /*-- get total of multiples --*/
+            
+            
+            
+            /*-- get total without fixed widths and heights --*/
+            
+            if (isCol && isFixed) {
+                
+                tW += c->mW;
+                h -= c->bounds.height;
+                
+            } else if (isRow && isFixed) {
+                
+                tH += c->mH;
+                w -= c->bounds.width;
+            } else {
+                
+                tW += c->mW;
+                tH += c->mH;
+            }
         }
         
         for (auto & c : inner) {
             
             c->tag();
             
-            float ww = ( bounds.width / tW ) * c->mW;
-            float hh = ( bounds.height / tH ) * c->mH;
+            bool isFixed = (c->fixed);
+            float ww = ( w / tW ) * c->mW;
+            float hh = ( h / tH ) * c->mH;
             
             float cx = c->bounds.x;
             float cy = c->bounds.y;
@@ -267,13 +294,19 @@ public:
             float fw = w;
             float fh = h;
             
-            if (type == PRECISION_COL || type == PRECISION_OBJ) {
+            if (isCol) {
                 fy = tY;
                 fh = hh;
             }
-            if (type == PRECISION_ROW) {
+            if (isRow) {
                 fx = tX;
                 fw = ww;
+            }
+            if (isFixed && isCol) {
+                fh = ch;
+            }
+            if (isFixed && isRow) {
+                fw = cw;
             }
             
             bool isDiff = ( (fx != cx) || (fy != cy) || (fw != cw) || (fh != ch) );
@@ -403,6 +436,12 @@ public:
         ofxPrecisionGrid * ch = new ofxPrecisionGrid( j["type"].get<int>() );
         ch->mH = j["height"].get<float>(); // default multiH
         ch->mW = j["width"].get<float>(); // default multiWidth
+        
+//        if (!j["fX"].is_null()) ch->fX = j["fX"].get<float>();
+//        if (!j["fY"].is_null()) ch->fY = j["fY"].get<float>();
+//        if (!j["fW"].is_null()) ch->fW = j["fW"].get<float>();
+//        if (!j["fH"].is_null()) ch->fH = j["fH"].get<float>();
+        
         ch->type = j["type"].get<int>();
         ch->parent = nullptr;
         add(ch, idx);
@@ -502,11 +541,11 @@ public:
         
         ofJson j;
         
-        if (this == getRoot()) {
-            j["x"] = bounds.x;
-            j["y"] = bounds.y;
-            j["width"] = bounds.width;
-            j["height"] = bounds.height;
+        if (!parent) {
+            j["fX"] = bounds.x;
+            j["fY"] = bounds.y;
+            j["fW"] = bounds.width;
+            j["fH"] = bounds.height;
         } else {
             j["type"] = type;
             j["width"] = mW;

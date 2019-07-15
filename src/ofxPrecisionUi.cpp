@@ -2,18 +2,13 @@
 #include "ofxPrecisionUi.h"
 
 
-ofxPrecisionUi::ofxPrecisionUi(ofxPrecisionGrid * u) {
+ofxPrecisionUi::ofxPrecisionUi(ofxPrecisionGrid * u, ofxPrecisionGrid * b) {
     unit = u;
     mode = PRECISION_M_RESIZE;
     isCurrently = CURRENTLY_NOWT;
     
     binChoice = -1;
-    bin = new ofxPrecisionGrid();
-    bin->set(20,20,20,80);
-    bin->add(0);
-    bin->add(0);
-    bin->add(0);
-    bin->add(0);
+    bin = b;
     
     for (auto & u : unit->global) {
         ofxPrecisionAreas a( u );
@@ -29,7 +24,7 @@ void ofxPrecisionUi::keypress(int k) {
     if (i == PRECISION_M_NONE) mode = PRECISION_M_NONE;
     if (i == PRECISION_M_RESIZE) mode = PRECISION_M_RESIZE;
     if (i == PRECISION_M_MOVE) mode = PRECISION_M_MOVE;
-    if (i == PRECISION_M_MARGIN) mode = PRECISION_M_MARGIN;
+    if (i == PRECISION_M_PADDING) mode = PRECISION_M_PADDING;
     
     if (k == OF_KEY_BACKSPACE) {
         actions.clear();
@@ -149,6 +144,9 @@ void ofxPrecisionUi::draw(bool iso) {
         ofDrawRectangle(curr->bounds);
         ofNoFill();
         if (iso) ofPopMatrix();
+        if (current->fixed) {
+            ofDrawBitmapStringHighlight("Fixed", current->bounds.getCenter());
+        }
     }
     
     
@@ -208,11 +206,11 @@ void ofxPrecisionUi::draw(bool iso) {
         }
     }
     
-    for (int i = 1; i < 5; i++) {
+    for (int i = 1; i < 4; i++) {
         string t = "None";
-        if (i == PRECISION_M_RESIZE) t = "Resize";
-        if (i == PRECISION_M_MOVE) t = "Move";
-        if (i == PRECISION_M_MARGIN) t = "Margin";
+        if (i == PRECISION_M_RESIZE) t = "Resize / Move";
+        if (i == PRECISION_M_MOVE) t = "Resize / Move";
+        if (i == PRECISION_M_PADDING) t = "Padding";
         
         ofSetColor(0,255,255);
         if ( mode == i ) ofSetColor( 255 );
@@ -287,22 +285,43 @@ void ofxPrecisionUi::pressed(int x, int y) {
     bool modeMove = isMode( PRECISION_M_MOVE );
     bool modeResize = isMode( PRECISION_M_RESIZE );
     bool hasCurr = (current);
-    bool isInside = (current) ? current->bounds.inside(x,y) : false;
-    bool hasActions = actions.size();
+    bool isInsideCurrent = (current) ? current->bounds.inside(x,y) : false;
+    bool hasResizeActions = false;
     
+    for (auto & a : actions) {
+        
+        int t = a.type;
+        string m = "";
+        if (t == PRECISION_W) m = "PRECISION_W";
+        if (t == PRECISION_H) m = "PRECISION_H";
+        if (t == PRECISION_IN) m = "PRECISION_IN";
+        if (t == PRECISION_PL) m = "PRECISION_PL";
+        if (t == PRECISION_PT) m = "PRECISION_PT";
+        if (t == PRECISION_PR) m = "PRECISION_PR";
+        if (t == PRECISION_PB) m = "PRECISION_PB";
+        if (t == PRECISION_DT) m = "PRECISION_DT";
+        if (t == PRECISION_DR) m = "PRECISION_DR";
+        if (t == PRECISION_DB) m = "PRECISION_DB";
+        if (t == PRECISION_DL) m = "PRECISION_DL";
+        if (t == PRECISION_DH) m = "PRECISION_DH";
+        if (t == PRECISION_DV) m = "PRECISION_DV";
+        
+        ofLog() << m;
+        
+        if (a.type == PRECISION_W || a.type == PRECISION_H) hasResizeActions = true;
+    }
     
-    if (isInside && modeMove) {
-        
-        setStatus( CURRENTLY_MOVING );
-        
-    } else if (modeResize && hasActions) {
-        
-        setStatus( CURRENTLY_RESIZING );
-        
-    } else {
-        
-        setStatus( CURRENTLY_SELECTING );
-        
+    ofLog() << "HAS RESIZE ACTIONS?" << hasResizeActions;
+    
+    if (modeMove || modeResize) {
+        if (isInsideCurrent && !hasResizeActions) {
+            setStatus( CURRENTLY_MOVING );
+        } else if (hasResizeActions) {
+            setStatus( CURRENTLY_RESIZING );
+        } else {
+            setStatus( CURRENTLY_SELECTING );
+            
+        }
     }
     
     
@@ -338,6 +357,7 @@ void ofxPrecisionUi::dragged(int x, int y) {
     } else if ( isResizing ) {
         dragToResize( x, y );
     } else if  ( isMoving ) {
+        actions.clear();
         findDropPoints(x, y);
     }
     
@@ -398,15 +418,19 @@ void ofxPrecisionUi::moved(int x, int y) {
     
     bool modeMove = isMode(PRECISION_M_MOVE);
     bool modeResize = isMode( PRECISION_M_RESIZE );
+    bool modePadding = isMode( PRECISION_M_PADDING );
     
-    if ( modeResize ) {
+    setStatus( CURRENTLY_MOVING );
+    
+    if ( modeResize || modeResize ) {
         
+        actions.clear();
         findResizePoints( x, y );
-        
-    } else if ( modeMove ) {
-        
         findDropPoints( x, y );
+        
     }
+    
+    if (actions.size() > 0) setStatus( CURRENTLY_HOVERING );
 
 }
 
@@ -667,7 +691,6 @@ void ofxPrecisionUi::clear() {
 void ofxPrecisionUi::findDropPoints( int x, int y ) {
     
     
-    actions.clear();
     ofPoint p(x, y);
     float padd = 5;
     bool isFound = false;
@@ -713,7 +736,7 @@ void ofxPrecisionUi::findDropPoints( int x, int y ) {
         
         bool invalid = (current) ? current->isInvalid( g ) : false;
         
-        if (true) {
+        if (!invalid) {
             
             if (dropInside || dropRight || dropLeft || dropBottom || dropTop) {
                 
@@ -767,7 +790,6 @@ void ofxPrecisionUi::findDropPoints( int x, int y ) {
 void ofxPrecisionUi::findResizePoints( int x, int y ) {
     
     
-    actions.clear();
     ofPoint p(x, y);
     float padd = 5;
     bool isFound = false;

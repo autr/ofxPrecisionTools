@@ -41,5 +41,7 @@ class ofApp : public ofBaseApp{
         ofJson json;
         int mx, my;
     
+        ofxPrecisionGrid * bin;
+    
         
 };

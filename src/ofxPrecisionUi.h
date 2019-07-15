@@ -12,14 +12,15 @@
 
 #define PRECISION_M_NONE 1
 #define PRECISION_M_RESIZE 2
-#define PRECISION_M_MOVE 3
-#define PRECISION_M_MARGIN 4
+#define PRECISION_M_MOVE 2
+#define PRECISION_M_PADDING 3
 
 #define CURRENTLY_NOWT 0
 #define CURRENTLY_SELECTING 1
 #define CURRENTLY_ADDING 2
 #define CURRENTLY_RESIZING 3
 #define CURRENTLY_MOVING 4
+#define CURRENTLY_HOVERING 5
 
 class ofxPrecisionUi {
 public:
@@ -51,7 +52,7 @@ public:
     map<ofxPrecisionGrid *, ofxPrecisionAreas> areas;
     
     
-    ofxPrecisionUi(ofxPrecisionGrid * u);
+    ofxPrecisionUi(ofxPrecisionGrid * u, ofxPrecisionGrid * b);
     
     
     /*-- current selected --*/
