@@ -16,9 +16,10 @@
 #define PRECISION_M_MARGIN 4
 
 #define CURRENTLY_NOWT 0
-#define CURRENTLY_HOVERING 1
-#define CURRENTLY_DROPPING 2
+#define CURRENTLY_SELECTING 1
+#define CURRENTLY_ADDING 2
 #define CURRENTLY_RESIZING 3
+#define CURRENTLY_MOVING 4
 
 class ofxPrecisionUi {
 public:
@@ -26,7 +27,13 @@ public:
     /*-- mode --*/
 
     int mode = 1;
-    int currently;
+    int isCurrently;
+    ofPoint pressOrigin;
+    
+    /*-- selecting --*/
+    
+    vector<ofxPrecisionGrid *> selected;
+    ofRectangle dragArea;
     
     /*-- drag + drop --*/
 
@@ -50,6 +57,10 @@ public:
     /*-- current selected --*/
 
     ofxPrecisionGrid * current = nullptr;
+    
+    bool is(int i);
+    void setStatus(int i);
+    bool isMode(int i);
 
     void up();
     void down();
@@ -76,13 +87,16 @@ public:
     void dragged(int x, int y);
     void moved(int x, int y);
     
-    void pressed_resize( int x, int y);
-    void pressed_move( int x, int y);
-    void pressed_margin( int x, int y);
     
-    void released_drop( int x, int y);
-    void released_select( int x, int y);
-    void released_move( int x, int y);
+    ofxPrecisionGrid  * findCommonParent( vector<ofxPrecisionGrid *> list );
+    void generateActions(int x, int y);
+    void findDropPoints( int x, int y);
+    void findResizePoints( int x, int y);
+    void dragToResize(int x, int y);
+    void addFromBin( int x, int y);
+    void clickToSelect( int x, int y);
+    void selectFromRect( ofRectangle r );
+    bool moveToPosition( int x, int y);
 
     /*-- callback events --*/
 

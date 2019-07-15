@@ -178,6 +178,36 @@ void ofApp::draw(){
     
     
     cursor->draw( ofGetMouseX(), ofGetMouseY() );
+    
+    if (ui->current) {
+    
+        ofDrawBitmapStringHighlight( "Location:" , 20, 300 );
+        ofDrawBitmapStringHighlight( ui->current->getLocationString() , 20, 320 );
+        ofDrawBitmapStringHighlight( "Depth:" , 20, 340 );
+        ofDrawBitmapStringHighlight( ofToString( ui->current->depth() ) , 20, 360 );
+        ofDrawBitmapStringHighlight( "Global Index:" , 20, 380 );
+        
+        string gl = "";
+        auto it = find(ui->unit->global.begin(), ui->unit->global.end(), ui->current);
+        if (it != ui->unit->global.end()) {
+            gl = "Not found";
+        } else {
+            gl = ofToString( std::distance(ui->unit->global.begin(), it) );
+        }
+        ofDrawBitmapStringHighlight( gl , 20, 400 );
+        
+        string m = "NOWT";
+        if ( ui->is(CURRENTLY_NOWT) ) m = "NOWT";
+        if ( ui->is(CURRENTLY_SELECTING) ) m = "SELECTING";
+        if ( ui->is(CURRENTLY_ADDING) ) m = "ADDING";
+        if ( ui->is(CURRENTLY_RESIZING) ) m = "RESIZING";
+        if ( ui->is(CURRENTLY_MOVING) ) m = "MOVING";
+        ofDrawBitmapStringHighlight( m, 20, 280);
+        
+    }
+//    ofDrawBitmapStringHighlight( ofToString( ui->current->depth() ) , 20, 300 );
+//    ofDrawBitmapStringHighlight( ofToString( ui->current->depth() ) , 20, 300 );
+//    ofDrawBitmapStringHighlight( ofToString( ui->current->depth() ) , 20, 300 );
 }
 
 //--------------------------------------------------------------
@@ -206,6 +236,9 @@ void ofApp::keyPressed(int key){
     if (key == 'a') {
         ofJson j = grid->json();
         grid->load(j);
+    }
+    if (key == 'f' ) {
+        grid->amend();
     }
     
     ui->keypress(key);

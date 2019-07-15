@@ -198,7 +198,7 @@ public:
     vector<int> & position(vector<int> & pos) {
         
         if (parent == this) {
-            ofLogError("position() loop");
+            ofLogError("Parent is also this");
             return;
         }
         
@@ -369,17 +369,33 @@ public:
         return a;
     }
     
-    void move( ofxPrecisionGrid * u , int idx = -1) {
-        vector<ofxPrecisionGrid *> all = u->collect();
-        auto i = std::find(all.begin(), all.end(), this);
-        if (i != all.end()) {
-            ofLogNotice() << "Cannot move element into self";
-            return;
-        }
+    bool isInvalid( ofxPrecisionGrid * g ) {
         
+        if ( g == this ) return true;
+        
+        return false;
+        
+        bool invalid = true;
+        
+        for ( int i = 0; i < location.size(); i++ ) {
+            int p = location[i];
+            if (i < g->location.size()) {
+                int pp = g->location[i];
+                if (p != pp) invalid = false;
+            }
+        }
+        return invalid;
+    }
+    
+    bool move( ofxPrecisionGrid * u , int idx = -1) {
+        
+        if ( isInvalid(u) ) return false;
         
         if (u->parent) remove( u->parent->inner, u ); // remove from old parent
         add( u, idx ); // add here
+        ofLog() << "Move fr: " << u->getLocationString();
+        ofLog() << "Move to: " << getLocationString();
+        return true;
     }
     
     ofxPrecisionGrid & add(ofJson & j, int idx = -1) {
@@ -431,6 +447,12 @@ public:
         add(ch, idx);
         
         return * ch;
+    }
+    
+    string getLocationString(string l = "") {
+        if ( parent == nullptr ) return l;
+        l = " > " +  ofToString( getIndex() ) + l ;
+        return parent->getLocationString( l );
     }
     
     int getIndex() {
