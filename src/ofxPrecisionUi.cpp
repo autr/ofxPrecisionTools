@@ -16,6 +16,8 @@ ofxPrecisionUi::ofxPrecisionUi(ofxPrecisionGrid * u, ofxPrecisionGrid * b) {
     }
     
     ofAddListener(unit->event, this, &ofxPrecisionUi::onAction);
+    
+    offsetScroll();
 }
 
 void ofxPrecisionUi::keypress(int k) {
@@ -27,10 +29,12 @@ void ofxPrecisionUi::keypress(int k) {
     if (i == PRECISION_M_PADDING) mode = PRECISION_M_PADDING;
     
     if (k == OF_KEY_BACKSPACE) {
-        actions.clear();
-        current->remove();
-        current = nullptr;
-        unit->amend();
+        if (current != unit) {
+            actions.clear();
+            current->remove();
+            current = nullptr;
+            unit->amend();
+        }
     }
 }
 void ofxPrecisionUi::keyrelease(int k) {
@@ -91,6 +95,17 @@ void ofxPrecisionUi::select(ofxPrecisionGrid * u) {
     current = u;
 }
 
+void ofxPrecisionUi::drawAreas() {
+    for( auto & a : areas) {
+        ofSetColor(255,0,0,150);
+        ofNoFill();
+        ofDrawRectangle(a.second.t);
+        ofDrawRectangle(a.second.b);
+        ofDrawRectangle(a.second.r);
+        ofDrawRectangle(a.second.l);
+    }
+}
+
 void ofxPrecisionUi::onAction(ofxPrecisionEvent & e) {
     
     if (e.type == "clear" ) {
@@ -109,7 +124,26 @@ void ofxPrecisionUi::onAction(ofxPrecisionEvent & e) {
     if (e.type == "removed") {
         areas.erase(e.u);
     }
+    if (e.type == "setscroll") {
+        offsetScroll();
+    }
     
+}
+
+void ofxPrecisionUi::offsetScroll() {
+    
+    vector<ofxPrecisionGrid *> list;
+    int count = unit->getScrollingGrids(list);
+    float x = unit->bounds.x;
+    float w = unit->bounds.width;
+    float m = 20;
+    float i = 0;
+    for (auto & ch : list) {
+        float o = w - (ch->bounds.x - x) + m;
+        i += o;
+        ch->sideOffset = i;
+    }
+    unit->amend();
 }
 
 void ofxPrecisionUi::draw(bool iso) {
@@ -147,8 +181,12 @@ void ofxPrecisionUi::draw(bool iso) {
         if (current->fixed) {
             ofDrawBitmapStringHighlight("Fixed", current->bounds.getCenter());
         }
+        if (current->scroll) {
+            ofDrawBitmapStringHighlight("Scroll", current->bounds.getCenter());
+        }
     }
     
+    /*-- actions --*/
     
     if (isMoving || modeResize ) {
     
@@ -170,13 +208,15 @@ void ofxPrecisionUi::draw(bool iso) {
             ofPoint bl = u->bounds.getBottomLeft();
             
             
-            bool isResize = (act.type == PRECISION_W || act.type == PRECISION_H );
+            bool isResize = (act.type == PRECISION_RR || act.type == PRECISION_RB );
             
             if (isResize && u->parent) ofDrawRectangle(u->parent->bounds);
             if (isResize && !u->parent) ofDrawRectangle(u->bounds);
             
-            if (act.type == PRECISION_W) ofDrawLine(tr,br);
-            if (act.type == PRECISION_H) ofDrawLine(bl,br);
+            if (act.type == PRECISION_RR) ofDrawLine(tr,br);
+            if (act.type == PRECISION_RB) ofDrawLine(bl,br);
+            if (act.type == PRECISION_RT) ofDrawLine(tl,tr);
+            if (act.type == PRECISION_RL) ofDrawLine(tl,bl);
             
             ofSetColor(0, 255, 0);
             
@@ -206,6 +246,8 @@ void ofxPrecisionUi::draw(bool iso) {
         }
     }
     
+    /*-- bin --*/
+    
     for (int i = 1; i < 4; i++) {
         string t = "None";
         if (i == PRECISION_M_RESIZE) t = "Resize / Move";
@@ -225,8 +267,22 @@ void ofxPrecisionUi::draw(bool iso) {
 //        ofDrawRectangle(u->bounds);
 //    }
 //
+    
+    /*-- select area --*/
+    
     ofSetColor(255,255,255,100);
     if ( is(CURRENTLY_SELECTING) )ofDrawRectangle(dragArea);
+    
+    /*-- select area --*/
+    
+    if ( is(CURRENTLY_MOVING) ) {
+        ofNoFill();
+        ofSetColor(current->style.defaultColor, 100);
+        ofRectangle r = current->bounds;
+        r.x = draggedOrigin.x;
+        r.y = draggedOrigin.y;
+        ofDrawRectangle( r );
+    }
     
     
     
@@ -269,18 +325,42 @@ void ofxPrecisionUi::selectFromRect(ofRectangle r) {
     current = findCommonParent( selected );
 }
 
+void ofxPrecisionUi::logAction( ofxPrecisionAction & a ) {
+    
+    int t = a.type;
+    string m = "";
+    if (t == PRECISION_RR) m = "PRECISION_RR";
+    if (t == PRECISION_RB) m = "PRECISION_RB";
+    if (t == PRECISION_RL) m = "PRECISION_RL";
+    if (t == PRECISION_RT) m = "PRECISION_RT";
+    
+    if (t == PRECISION_IN) m = "PRECISION_IN";
+    if (t == PRECISION_PL) m = "PRECISION_PL";
+    if (t == PRECISION_PT) m = "PRECISION_PT";
+    if (t == PRECISION_PR) m = "PRECISION_PR";
+    if (t == PRECISION_PB) m = "PRECISION_PB";
+    if (t == PRECISION_DT) m = "PRECISION_DT";
+    if (t == PRECISION_DR) m = "PRECISION_DR";
+    if (t == PRECISION_DB) m = "PRECISION_DB";
+    if (t == PRECISION_DL) m = "PRECISION_DL";
+    if (t == PRECISION_DH) m = "PRECISION_DH";
+    if (t == PRECISION_DV) m = "PRECISION_DV";
+    ofLogVerbose("[ofxPrecisionUi]") << "Pressed:" << m << a.unit->name;
+}
 
 void ofxPrecisionUi::pressed(int x, int y) {
     
-    /*-- drag drop ui --*/
+    /*-- dropper --*/
     
-//    for (int i = 0; i < bin->inner.size(); i++) {
-//        if (bin->inner[i]->bounds.inside(x,y)) {
-//            binChoice = i;
-//            currently = CURRENTLY_DROPPING;
-//            return;
-//        }
-//    }
+    for (int i = 0; i < bin->inner.size(); i++) {
+        if (bin->inner[i]->bounds.inside(x,y)) {
+            binChoice = i;
+            setStatus(CURRENTLY_ADDING);
+            return;
+        }
+    }
+    
+    /*-- actions --*/
     
     bool modeMove = isMode( PRECISION_M_MOVE );
     bool modeResize = isMode( PRECISION_M_RESIZE );
@@ -290,28 +370,9 @@ void ofxPrecisionUi::pressed(int x, int y) {
     
     for (auto & a : actions) {
         
-        int t = a.type;
-        string m = "";
-        if (t == PRECISION_W) m = "PRECISION_W";
-        if (t == PRECISION_H) m = "PRECISION_H";
-        if (t == PRECISION_IN) m = "PRECISION_IN";
-        if (t == PRECISION_PL) m = "PRECISION_PL";
-        if (t == PRECISION_PT) m = "PRECISION_PT";
-        if (t == PRECISION_PR) m = "PRECISION_PR";
-        if (t == PRECISION_PB) m = "PRECISION_PB";
-        if (t == PRECISION_DT) m = "PRECISION_DT";
-        if (t == PRECISION_DR) m = "PRECISION_DR";
-        if (t == PRECISION_DB) m = "PRECISION_DB";
-        if (t == PRECISION_DL) m = "PRECISION_DL";
-        if (t == PRECISION_DH) m = "PRECISION_DH";
-        if (t == PRECISION_DV) m = "PRECISION_DV";
-        
-        ofLog() << m;
-        
-        if (a.type == PRECISION_W || a.type == PRECISION_H) hasResizeActions = true;
+        logAction( a );
+        if (a.type == PRECISION_RR || a.type == PRECISION_RB || a.type == PRECISION_RR || a.type == PRECISION_RL ) hasResizeActions = true;
     }
-    
-    ofLog() << "HAS RESIZE ACTIONS?" << hasResizeActions;
     
     if (modeMove || modeResize) {
         if (isInsideCurrent && !hasResizeActions) {
@@ -322,6 +383,9 @@ void ofxPrecisionUi::pressed(int x, int y) {
             setStatus( CURRENTLY_SELECTING );
             
         }
+    } else {
+        
+        if (isInsideCurrent) setStatus( CURRENTLY_SELECTING );
     }
     
     
@@ -333,19 +397,35 @@ void ofxPrecisionUi::pressed(int x, int y) {
         a.oPress.y = y;
     }
     
+    if (current) pressOriginBounds = current->bounds;
     pressOrigin.x = x;
     pressOrigin.y = y;
+    draggedOrigin = pressOrigin;
     dragArea.set( x, y, 0, 0);
 }
 
 
 void ofxPrecisionUi::dragged(int x, int y) {
     
+    /*-- dropper --*/
+    
+    if (is(CURRENTLY_ADDING)) {
+        
+        actions.clear();
+        findDropPoints(x, y);
+        
+        return;
+    }
+    
+    /*-- actions --*/
+    
     bool isSelecting = is(CURRENTLY_SELECTING);
     bool isResizing = is(CURRENTLY_RESIZING);
     bool isMoving = is(CURRENTLY_MOVING);
     
     if ( isSelecting ) {
+        
+        /*-- dragbox --*/
         
         dragArea.x = pressOrigin.x;
         dragArea.y = pressOrigin.y;
@@ -355,27 +435,48 @@ void ofxPrecisionUi::dragged(int x, int y) {
         selectFromRect( dragArea );
         
     } else if ( isResizing ) {
+        
+        /*-- resizing --*/
+        
         dragToResize( x, y );
+        
     } else if  ( isMoving ) {
+        
+        /*-- dropping --*/
+        
         actions.clear();
+        
+        bool isGhost = current->ghost;
+        
+        ofRectangle r = pressOriginBounds;
+        float ox = pressOrigin.x - x;
+        float oy = pressOrigin.y - y;
+        draggedOrigin.x = r.x - ox;
+        draggedOrigin.y = r.y - oy;
+        
+        if (isGhost) {
+            current->set( draggedOrigin.x, draggedOrigin.y, r.width, r.height );
+            current->amend();
+        }
+        
         findDropPoints(x, y);
     }
-    
-    
-    bool binDrop = ( binChoice != -1 );
-    
-//    if (binChoice != -1) {
-//
-//        /*-- reuse moved logic --*/
-//
-//        moved(x, y);
-//        return;
-//    }
     
     
     
 }
 void ofxPrecisionUi::released(int x, int y) {
+    
+    /*-- dropper --*/
+    
+    if (is(CURRENTLY_ADDING)) {
+        
+        addFromBin( x, y );
+        binChoice = -1;
+        return;
+    }
+
+    /*-- actions --*/
     
     ofRectangle r(x - 2, y -2, 4, 4);
     bool sameOrigin = r.inside(x, y);
@@ -385,28 +486,13 @@ void ofxPrecisionUi::released(int x, int y) {
     bool isMoving = is( CURRENTLY_MOVING );
     bool isResizing = is( CURRENTLY_RESIZING );
     
-    
-//    if (!modeResize && !isResizing) {
+    /*-- move or click to select --*/
     
     bool wasMoved = (isMoving) ? moveToPosition( x, y) : false;
-    if (!wasMoved) {
-        ofLog() << "Click to select";
+    bool isGhost = (current) ? current->ghost : false;
+    if (!wasMoved && !isGhost) {
         clickToSelect(x , y);
     }
-        
-//    }
-    
-    /*-- add element --*/
-    
-//    if (binChoice >= 0) {
-//
-//        addFromBin( x, y );
-//        binChoice = -1;
-//        return;
-//    }
-    
-    
-    
     
     actions.clear();
     setStatus( CURRENTLY_NOWT );
@@ -420,7 +506,7 @@ void ofxPrecisionUi::moved(int x, int y) {
     bool modeResize = isMode( PRECISION_M_RESIZE );
     bool modePadding = isMode( PRECISION_M_PADDING );
     
-    setStatus( CURRENTLY_MOVING );
+    setStatus( CURRENTLY_NOWT );
     
     if ( modeResize || modeResize ) {
         
@@ -429,7 +515,6 @@ void ofxPrecisionUi::moved(int x, int y) {
         findDropPoints( x, y );
         
     }
-    
     if (actions.size() > 0) setStatus( CURRENTLY_HOVERING );
 
 }
@@ -441,7 +526,7 @@ void ofxPrecisionUi::clickToSelect( int x, int y ) {
     float t = ofGetElapsedTimef();
     
     
-    if (ofGetKeyPressed(OF_KEY_SHIFT)) {
+    if (ofGetKeyPressed(OF_KEY_SHIFT) && current) {
         
         /*-- select shared parent element --*/
         
@@ -506,41 +591,59 @@ void ofxPrecisionUi::addFromBin( int x, int y ) {
         int aft = a.unit->getIndex() + 1;
         
         if (a.type == PRECISION_DB) {
-            ofLog() << "+B" << binChoice;
+            ofLogVerbose("[ofxPrecisionUi]") << "Dropping: bottom" << a.unit->name;
             p->add(binChoice, aft);
             binChoice = -1;
             return;
-        }
-        if (a.type == PRECISION_DR) {
-            ofLog() << "+R" << binChoice;
+        } else if (a.type == PRECISION_DR) {
+            ofLogVerbose("[ofxPrecisionUi]") << "Dropping: right" << a.unit->name;
             p->add(binChoice, aft);
             binChoice = -1;
             return;
-        }
-        if (a.type == PRECISION_DL) {
-            ofLog() << "+L" << binChoice;
+        } else if (a.type == PRECISION_DL) {
+            ofLogVerbose("[ofxPrecisionUi]") << "Dropping: left" << a.unit->name;
             p->add(binChoice, bef);
             binChoice = -1;
             return;
-        }
-        if (a.type == PRECISION_DT) {
-            ofLog() << "+T" << binChoice;
+        } else if (a.type == PRECISION_DT) {
+            ofLogVerbose("[ofxPrecisionUi]") << "Dropping: top" << a.unit->name;
             p->add(binChoice, bef);
             binChoice = -1;
             return;
-        }
-        if (a.type == PRECISION_IN) {
-            ofLog() << "+In" << binChoice;
+        } else if (a.type == PRECISION_IN) {
+            ofLogVerbose("[ofxPrecisionUi]") << "Dropping: inside" << a.unit->name;
             a.unit->add(binChoice);
             binChoice = -1;
             return;
         }
     }
     
+    ofLogVerbose("[ofxPrecisionUi]") << "Dropping: ghost";
+    
+//    ofxPrecisionGrid * ch = new ofxPrecisionGrid(binChoice);
+//    ch->mH = 1; // default multiH
+//    ch->mW = 1; // default multiWidth
+//    ch->parent = nullptr;
+    
+    
+//    ofxPrecisionGrid * ch = &unit->add(binChoice);//new ofxPrecisionGrid(binChoice);
+//    ch->mH = 1;
+//    ch->mW = 1;
+////    if (ch->parent) ch->remove( ch->parent->inner, ch ); // remove from old parent
+//    ch->set( x, y, 100, 100 );
+//    ch->ghost = true;
+//    ch->amend();
+//    unit->amend();
+//
+//    ofxPrecisionEvent e("added", ch);
+//    ofNotifyEvent(unit->event, e);
+    
 }
 
 
 bool ofxPrecisionUi::moveToPosition( int x, int y ) {
+    
+    if ( !current ) return false;
     
     ofPoint p = pressLast;
     float t = ofGetElapsedTimef();
@@ -569,7 +672,6 @@ bool ofxPrecisionUi::moveToPosition( int x, int y ) {
                 
                 actions.clear();
                 
-                
                 wasMoved = target->move(current, pos);
                 if (wasMoved) unit->amend();
             }
@@ -587,18 +689,36 @@ void ofxPrecisionUi::dragToResize(int x, int y) {
     
     for (auto & a : actions) {
         
+        bool isGhost = a.unit->ghost;
         
-        if (!a.unit->parent) {
+        if (!a.unit->parent || isGhost) {
             
             /*-- resize container --*/
             
             ofRectangle rr = a.oBounds;
-            float cx = a.oPress.x - x;
-            float cy = a.oPress.y - y;
-            float cw = (a.type == PRECISION_W) ? rr.width - cx : a.unit->bounds.width;
-            float ch = (a.type == PRECISION_H) ? rr.height - cy : a.unit->bounds.height;
+            float ox = a.oPress.x - x;
+            float oy = a.oPress.y - y;
+            float cx = rr.x;
+            float cy = rr.y;
+            float cw =  a.unit->bounds.width;
+            float ch =  a.unit->bounds.height;
+            if (a.type == PRECISION_RR) {
+                cw = rr.width - ox;
+            }
+            if (a.type == PRECISION_RB) {
+                ch = rr.height - oy;
+            }
+            if (a.type == PRECISION_RL) {
+                cx = rr.x - ox;
+                cw = rr.width + ox;
+            }
+            if (a.type == PRECISION_RT) {
+                cy = rr.y - oy;
+                ch = rr.height + oy;
+            }
             
-            a.unit->set( rr.x, rr.y, cw, ch);
+            a.unit->set( cx, cy, cw, ch);
+            a.unit->amend();
             setStatus( CURRENTLY_RESIZING );
             
             
@@ -612,57 +732,85 @@ void ofxPrecisionUi::dragToResize(int x, int y) {
             float offY = (a.oPress.y - y) / pH; // Y multiple
             int idx = a.unit->getIndex();
             
+            offY *= std::accumulate(a.mHeights.begin(), a.mHeights.end(), 0.0);
+            offX *= std::accumulate(a.mWidths.begin(), a.mWidths.end(), 0.0);
+            
             
             for (int i = 0; i < a.unit->parent->inner.size(); i++) {
                 ofxPrecisionGrid * sib = a.unit->parent->inner[i];
                 float w = a.mWidths[i];
                 float h = a.mHeights[i];
-                bool isResize = (a.type == PRECISION_W || a.type == PRECISION_H );
+                bool isResize = (a.type == PRECISION_RR || a.type == PRECISION_RB );
                 if (isResize) setStatus( CURRENTLY_RESIZING );
                 
-                if (!isShift && !isAlt) {
-                    if (a.type == PRECISION_W) {
-                        sib->mW = w;
-                        if (i == idx) sib->mW = w - offX;
-                        if (i == idx + 1) sib->mW = w + offX;
-                    }
-                    
-                    if (a.type == PRECISION_H) {
-                        sib->mH = h;
-                        if (i == idx) sib->mH = h - offY;
-                        if (i == idx + 1) sib->mH = h + offY;
-                    }
-                    
-                } // !shift + !alt
+                
                 
                 if (isShift && isAlt) {
                     
-                    if (a.type == PRECISION_W) {
+                    /*-- resize: shift + alt --*/
+                    
+                    if (a.type == PRECISION_RR) {
                         sib->mW = w;
                         if (i == idx) sib->mW = w - offX;
                         if (i > idx) sib->mW = w + offX / (float)( a.mWidths.size() - idx - 1 );
                     }
                     
-                    if (a.type == PRECISION_H) {
+                    if (a.type == PRECISION_RB) {
                         sib->mH = h;
                         if (i == idx) sib->mH = h - offY;
                         if (i > idx) sib->mH = h + offY / (float)( a.mHeights.size() - idx - 1 );
                     }
-                } // shift + alt
-                
-                if (isShift && !isAlt) {
-                    if (a.type == PRECISION_W) {
+                } else if (isShift && !isAlt) {
+                    
+                    /*-- resize: shift --*/
+                    
+                    if (a.type == PRECISION_RR) {
                         sib->mW = w;
                         if (i < idx + 1) sib->mW = w - (offX / (float)( idx + 1) );
                         if (i == idx + 1) sib->mW = w + offX;
                     }
                     
-                    if (a.type == PRECISION_H) {
+                    if (a.type == PRECISION_RB) {
                         sib->mH = h;
                         if (i < idx + 1) sib->mH = h - (offY / (float)( idx + 1) );
                         if (i == idx + 1) sib->mH = h + offY;
                     }
-                } // shift + !alt
+                } else {
+                    
+                    /*-- resize --*/
+                    
+                    if (a.type == PRECISION_RR) {
+                        sib->mW = w;
+                        if (i == idx) sib->mW = w - offX;
+                        if (i == idx + 1) sib->mW = w + offX;
+                    }
+                    
+                    if (a.type == PRECISION_RB) {
+                        sib->mH = h;
+                        if (i == idx) sib->mH = h - offY;
+                        if (i == idx + 1) sib->mH = h + offY;
+                    }
+                    
+                }
+                
+                if (i == idx) {
+                    
+                    ofRectangle rr = a.oBounds;
+                    float ox = a.oPress.x - x;
+                    float oy = a.oPress.y - y;
+                    float cx = rr.x;
+                    float cy = rr.y;
+                    float cw =  a.unit->bounds.width;
+                    float ch =  a.unit->bounds.height;
+                    if (a.type == PRECISION_RR) {
+                        cw = rr.width - ox;
+                    }
+                    if (a.type == PRECISION_RB) {
+                        ch = rr.height - oy;
+                    }
+                    a.unit->set( cx, cy, cw, ch);
+                }
+                
                 
             } // for each sibling
             
@@ -817,30 +965,47 @@ void ofxPrecisionUi::findResizePoints( int x, int y ) {
         bool resizeHeight = inB && inW && !isLast && !isInRow;
         bool resizeWidth = inR && inH && !isLast && !isInCol;
         
+        bool isGhost = g->ghost || (!g->parent);
+        
+        bool resizeGhostLeft = inL && inH && isGhost;
+        bool resizeGhostTop = inT && inW && isGhost;
+        bool resizeGhostRight = inR && inH && isGhost;
+        bool resizeGhostBottom = inB && inW && isGhost;
+        
+        
+        
         vector<float> mWidths;
         vector<float> mHeights;
         
-        if (resizeHeight || resizeWidth) {
+        if (resizeHeight || resizeWidth || resizeGhostLeft || resizeGhostTop) {
             
             mWidths = g->getWidths();
             mHeights = g->getHeights();
             isFound = true;
         }
         
+        /*-- ghosts --*/
+        
+        if (resizeGhostLeft) {
+            ofxPrecisionAction a(PRECISION_RL, g, p, mWidths, mHeights);
+            actions.push_back(a);
+        }
+        if (resizeGhostTop) {
+            ofxPrecisionAction a(PRECISION_RL, g, p, mWidths, mHeights);
+            actions.push_back(a);
+        }
+        
         /*-- height drag --*/
         
-        
-        if (resizeHeight) {
-            vector<float> mWidths = g->getWidths();
-            vector<float> mHeights = g->getHeights();
-            ofxPrecisionAction a(PRECISION_H, g, p, mWidths, mHeights);
+        if (resizeHeight || resizeGhostBottom) {
+            ofxPrecisionAction a(PRECISION_RB, g, p, mWidths, mHeights);
             actions.push_back(a);
         }
         
         /*-- width drag --*/
         
-        if (resizeWidth) {
-            ofxPrecisionAction a(PRECISION_W, g, p, mWidths, mHeights);
+        if (resizeWidth || resizeGhostRight) {
+            ofxPrecisionAction a(PRECISION_RR, g, p, mWidths, mHeights);
             actions.push_back(a);
         }
         

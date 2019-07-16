@@ -2,10 +2,12 @@
 
 //--------------------------------------------------------------
 void ofApp::setup(){
-    ofSetFrameRate(120);
-//    TIME_SAMPLE_SET_FRAMERATE(120.0f); //specify a target framerate
+    ofSetFrameRate(60.0);
+    TIME_SAMPLE_SET_FRAMERATE(60.0f); //specify a target framerate
     ofEnableAlphaBlending();
     ofLog::setAutoSpace(true);
+    
+//    ofSetLogLevel(OF_LOG_VERBOSE);
     
     count = 0;
     depth = 2;
@@ -14,7 +16,7 @@ void ofApp::setup(){
     
     cursor = new ofxPrecisionCursor();
     grid = new ofxPrecisionGrid();
-    ofRectangle r(200,200,ofGetWidth() - 400, ofGetHeight() - 400);
+    ofRectangle r(400,200,ofGetWidth() - 800, ofGetHeight() - 400);
     grid->set(r);
     undo = new ofxPrecisionUndo(grid);
     generate(grid);
@@ -34,9 +36,6 @@ void ofApp::setup(){
     
     ofBackground(0);
     
-    scroll.outer.set( 200, 200, 400, 400);
-    scroll.inner.set( 200, 200, 400, 1200);
-    
 }
 
 void ofApp::generate(ofxPrecisionGrid * iter) {
@@ -47,6 +46,7 @@ void ofApp::generate(ofxPrecisionGrid * iter) {
     a->add(0);
     a->add(0);
     a->add(0);
+    a->setScroll(true);
     ofxPrecisionGrid * aa = &grid->add(1);
     aa->add(0);
     ofxPrecisionGrid * aaa = &aa->add(0);
@@ -62,8 +62,8 @@ void ofApp::generate(ofxPrecisionGrid * iter) {
     bb->add(0);
     bb->add(0);
     b->add(0);
-    
-    grid->add(0);
+//
+//    grid->add(0);
     json = grid->json();
 }
 
@@ -219,20 +219,9 @@ void ofApp::draw(){
         
     }
     
-    scroll.update();
+    grid->draw();
     
-    ofNoFill();
-    ofSetColor(255,0,0);
-    ofPushMatrix();
-//    ofTranslate(100,100);
-    ofDrawRectangle( scroll.outer );
-    ofDrawRectangle( scroll.inner );
-    
-    ofFill();
-//    ofDrawRectangle( scroll.getScrollBar() );
-    
-    ofPopMatrix();
-    
+//    ui->drawAreas();
     
 }
 
@@ -264,7 +253,10 @@ void ofApp::keyPressed(int key){
         grid->load(j);
     }
     if (key == 'f' ) {
-        if (ui->current) ui->current->fixed = !ui->current->fixed;
+        if (ui->current) ui->current->setFixed( !ui->current->fixed );
+    }
+    if (key == 's' ) {
+        if (ui->current) ui->current->setScroll( !ui->current->scroll );
     }
     
     ui->keypress(key);
@@ -279,34 +271,30 @@ void ofApp::keyReleased(int key){
 
 //--------------------------------------------------------------
 void ofApp::mouseMoved(int x, int y ){
-//    TS_START("moved");
     ui->moved(x, y);
-//    TS_STOP("moved");
 }
 
 //--------------------------------------------------------------
 void ofApp::mouseDragged(int x, int y, int button){
 
-    scroll.dragged(x, y);
-//    TS_START("dragged");
     ui->dragged(x, y);
-//    TS_STOP("dragged");
+    grid->dragged(x,y);
 }
 
 void ofApp::mouseScrolled( ofMouseEventArgs& e) {
-    scroll.scrolled( e );
+    grid->scrolled(e);
 }
 //--------------------------------------------------------------
 void ofApp::mousePressed(int x, int y, int button){
 
-    scroll.pressed(x, y);
     ui->pressed(x, y);
+    grid->pressed(x,y);
 }
 
 //--------------------------------------------------------------
 void ofApp::mouseReleased(int x, int y, int button){
-    scroll.released(x, y);
     ui->released(x, y);
+    grid->released(x,y);
 
 }
 

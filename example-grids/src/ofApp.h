@@ -5,8 +5,7 @@
 #include "ofxPrecisionUi.h"
 #include "ofxPrecisionUndo.h"
 #include "ofxPrecisionCursor.h"
-#include "ScrollContainer.h"
-//#include "ofxTimeMeasurements.h"
+#include "ofxTimeMeasurements.h"
 
 class ofApp : public ofBaseApp{
 
@@ -42,7 +41,7 @@ class ofApp : public ofBaseApp{
         vector<int> sel;
         ofJson json;
         int mx, my;
-        ofxScrollBox scroll;
+//        ofxScrollBox scroll;
         ofxPrecisionGrid * bin;
     
         

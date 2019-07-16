@@ -30,6 +30,13 @@ public:
     int mode = 1;
     int isCurrently;
     ofPoint pressOrigin;
+    ofRectangle pressOriginBounds;
+    ofPoint draggedOrigin;
+    
+    bool is(int i);
+    void setStatus(int i);
+    bool isMode(int i);
+
     
     /*-- selecting --*/
     
@@ -46,23 +53,18 @@ public:
     
     /*-- setup --*/
     
+    vector<ofxPrecisionGrid * > grids;
     ofxPrecisionGrid * unit;
     ofxPrecisionGridStyle style;
     vector<ofxPrecisionAction> actions;
     map<ofxPrecisionGrid *, ofxPrecisionAreas> areas;
     
-    
     ofxPrecisionUi(ofxPrecisionGrid * u, ofxPrecisionGrid * b);
-    
     
     /*-- current selected --*/
 
     ofxPrecisionGrid * current = nullptr;
     
-    bool is(int i);
-    void setStatus(int i);
-    bool isMode(int i);
-
     void up();
     void down();
     void prev();
@@ -88,9 +90,8 @@ public:
     void dragged(int x, int y);
     void moved(int x, int y);
     
+    /*-- actions --*/
     
-    ofxPrecisionGrid  * findCommonParent( vector<ofxPrecisionGrid *> list );
-    void generateActions(int x, int y);
     void findDropPoints( int x, int y);
     void findResizePoints( int x, int y);
     void dragToResize(int x, int y);
@@ -109,7 +110,11 @@ public:
 
     /*-- util --*/
     
+    ofxPrecisionGrid  * findCommonParent( vector<ofxPrecisionGrid *> list );
     ofxPrecisionGrid * deepest(int x, int y);
+    void logAction( ofxPrecisionAction & a );
+    void drawAreas();
+    void offsetScroll();
     
     
     void clear();
