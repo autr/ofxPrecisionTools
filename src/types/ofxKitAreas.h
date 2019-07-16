@@ -1,14 +1,14 @@
 #pragma once
 
-struct ofxPrecisionAreas {
+struct ofxKitAreas {
     ofRectangle t, r, b, l;
     bool isLast, isFirst, isInCol, isInRow, noInner;
     
     
-    ofxPrecisionAreas() {
+    ofxKitAreas() {
         
     }
-    ofxPrecisionAreas(ofxPrecisionGrid * u) {
+    ofxKitAreas(ofxKitGrid * u) {
         
         int padd = 5;
         

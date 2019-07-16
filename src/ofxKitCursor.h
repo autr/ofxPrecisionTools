@@ -3,14 +3,14 @@
 #include "ofMain.h"
 #include "ofxSVG.h"
 
-class ofxPrecisionCursor {
+class ofxKitCursor {
 public:
     ofDirectory d;
     vector<string> names;
     map<string, ofxSVG> svg;
     map<string, ofTexture> t;
     string curr;
-    ofxPrecisionCursor();
+    ofxKitCursor();
     
     void random();
     

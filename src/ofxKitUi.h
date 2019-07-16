@@ -1,12 +1,12 @@
 
 #pragma once
 #include "ofMain.h"
-#include "ofxPrecisionGrid.h"
+#include "ofxKitGrid.h"
 
 /*-- struct types --*/
 
-#include "ofxPrecisionAction.h"
-#include "ofxPrecisionAreas.h"
+#include "ofxKitAction.h"
+#include "ofxKitAreas.h"
 
 /*-- modes --*/
 
@@ -22,7 +22,7 @@
 #define CURRENTLY_MOVING 4
 #define CURRENTLY_HOVERING 5
 
-class ofxPrecisionUi {
+class ofxKitUi {
 public:
     
     /*-- mode --*/
@@ -40,7 +40,7 @@ public:
     
     /*-- selecting --*/
     
-    vector<ofxPrecisionGrid *> selected;
+    vector<ofxKitGrid *> selected;
     ofRectangle dragArea;
     
     /*-- drag + drop --*/
@@ -48,28 +48,28 @@ public:
     bool moveActive = false;
     ofPoint movePos;
     
-    ofxPrecisionGrid * bin;
+    ofxKitGrid * bin;
     int binChoice;
     
     /*-- setup --*/
     
-    vector<ofxPrecisionGrid * > grids;
-    ofxPrecisionGrid * unit;
-    ofxPrecisionGridStyle style;
-    vector<ofxPrecisionAction> actions;
-    map<ofxPrecisionGrid *, ofxPrecisionAreas> areas;
+    vector<ofxKitGrid * > grids;
+    ofxKitGrid * unit;
+    ofxKitGridStyle style;
+    vector<ofxKitAction> actions;
+    map<ofxKitGrid *, ofxKitAreas> areas;
     
-    ofxPrecisionUi(ofxPrecisionGrid * u, ofxPrecisionGrid * b);
+    ofxKitUi(ofxKitGrid * u, ofxKitGrid * b);
     
     /*-- current selected --*/
 
-    ofxPrecisionGrid * current = nullptr;
+    ofxKitGrid * current = nullptr;
     
     void up();
     void down();
     void prev();
     void next();
-    void select(ofxPrecisionGrid * u);
+    void select(ofxKitGrid * u);
     
     /*-- key interactions --*/
 
@@ -102,7 +102,7 @@ public:
 
     /*-- callback events --*/
 
-    void onAction(ofxPrecisionEvent & e);
+    void onAction(ofxKitEvent & e);
 
     /*-- draw --*/
     
@@ -110,9 +110,9 @@ public:
 
     /*-- util --*/
     
-    ofxPrecisionGrid  * findCommonParent( vector<ofxPrecisionGrid *> list );
-    ofxPrecisionGrid * deepest(int x, int y);
-    void logAction( ofxPrecisionAction & a );
+    ofxKitGrid  * findCommonParent( vector<ofxKitGrid *> list );
+    ofxKitGrid * deepest(int x, int y);
+    void logAction( ofxKitAction & a );
     void drawAreas();
     void offsetScroll();
     

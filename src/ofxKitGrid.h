@@ -27,18 +27,18 @@
 #define PRECISION_DH 14 // drop H
 #define PRECISION_DV 15 // drop V
 
-#include "ofxPrecisionStyle.h"
-#include "ofxPrecisionError.h"
+#include "ofxKitStyle.h"
+#include "ofxKitError.h"
 
-class ofxPrecisionGrid;
+class ofxKitGrid;
 
 
-#include "ofxPrecisionEvent.h"
+#include "ofxKitEvent.h"
 
-class ofxPrecisionGrid {
+class ofxKitGrid {
 public:
     
-    ofxPrecisionGridStyle style;
+    ofxKitGridStyle style;
     ofRectangle bounds;
     
 #ifdef OFXSCROLLBOX
@@ -56,22 +56,22 @@ public:
     string name;
     
     vector<int> location;
-    ofxPrecisionGrid * parent;
-    vector<ofxPrecisionGrid *> inner;
-    vector<ofxPrecisionGrid *> global;
-    vector<ofxPrecisionGrid *> ghosts;
-    vector<ofxPrecisionError> errors;
-    ofEvent<ofxPrecisionEvent> event;
+    ofxKitGrid * parent;
+    vector<ofxKitGrid *> inner;
+    vector<ofxKitGrid *> global;
+    vector<ofxKitGrid *> ghosts;
+    vector<ofxKitError> errors;
+    ofEvent<ofxKitEvent> event;
     
-    ofEvent<ofxPrecisionEvent> added;
-    ofEvent<ofxPrecisionEvent> amended;
+    ofEvent<ofxKitEvent> added;
+    ofEvent<ofxKitEvent> amended;
     
     
-    ofxPrecisionGrid *& operator[] (size_t i) {
+    ofxKitGrid *& operator[] (size_t i) {
         return inner[i];
     }
     
-    ofxPrecisionGrid() {
+    ofxKitGrid() {
         
         /*-- root --*/
         
@@ -86,13 +86,13 @@ public:
         sideOffset = 0;
         amend();
 #ifdef OFXSCROLLBOX
-        ofAddListener(scrollBox.event , this, &ofxPrecisionGrid::scrollEvent);
+        ofAddListener(scrollBox.event , this, &ofxKitGrid::scrollEvent);
 #endif
         
         
         
     };
-    ofxPrecisionGrid(int t) {
+    ofxKitGrid(int t) {
         
         /*-- child --*/
         
@@ -104,11 +104,11 @@ public:
         type = t;
         sideOffset = 0;
 #ifdef OFXSCROLLBOX
-        ofAddListener(scrollBox.event , this, &ofxPrecisionGrid::scrollEvent);
+        ofAddListener(scrollBox.event , this, &ofxKitGrid::scrollEvent);
 #endif
     };
     
-    int getScrollingGrids( vector<ofxPrecisionGrid *> & list ) {
+    int getScrollingGrids( vector<ofxKitGrid *> & list ) {
         if (scroll) list.push_back(this);
         for (auto & ch : inner ) ch->getScrollingGrids( list );
         return list.size();
@@ -117,13 +117,13 @@ public:
     void setFixed( bool b ) {
         fixed = b;
         (parent) ? parent->amend() : amend();
-        ofxPrecisionEvent e("setfixed", this);
+        ofxKitEvent e("setfixed", this);
         ofNotifyEvent(getRoot()->event, e);
     }
     void setScroll( bool b ) {
         scroll = b;
         (parent) ? parent->amend() : amend();
-        ofxPrecisionEvent e("setscroll", this);
+        ofxKitEvent e("setscroll", this);
         ofNotifyEvent(getRoot()->event, e);
     }
     
@@ -143,7 +143,7 @@ public:
         r.height -= p * 2;
         
         if ((r.width < style.minWidth) || (r.height < style.minHeight)) {
-            ofxPrecisionError err("Bounds too small", name);
+            ofxKitError err("Bounds too small", name);
             getRoot()->errors.push_back(err);
         }
         
@@ -167,8 +167,8 @@ public:
         set(bounds.x, bounds.y, bounds.width, h);
     }
     
-    ofxPrecisionGrid * get(vector<int> idx) {
-        ofxPrecisionGrid * u = getRoot();
+    ofxKitGrid * get(vector<int> idx) {
+        ofxKitGrid * u = getRoot();
         for (auto & i : idx) {
             int ii = i;
             if (ii < 0) ii = 0;
@@ -184,7 +184,7 @@ public:
         vector<float> w;
         if (!parent) return w;
         for (int i = 0; i < parent->inner.size(); i++) {
-            ofxPrecisionGrid * ch = parent->inner[i];
+            ofxKitGrid * ch = parent->inner[i];
             if (!ch->ghost) w.push_back(ch->mW);
         }
         return w;
@@ -193,7 +193,7 @@ public:
         vector<float> h;
         if (!parent) return h;
         for (int i = 0; i < parent->inner.size(); i++) {
-            ofxPrecisionGrid * ch = parent->inner[i];
+            ofxKitGrid * ch = parent->inner[i];
             if (!ch->ghost) h.push_back(ch->mH);
         }
         return h;
@@ -329,7 +329,7 @@ public:
         
         if (!ghost) tag();
         
-        ofxPrecisionEvent e("amended", this);
+        ofxKitEvent e("amended", this);
         ofNotifyEvent(getRoot()->event, e);
         
         /*-- iterate width, height and position into pixels --*/
@@ -481,12 +481,12 @@ public:
         return errors.size() > 0;
     }
     
-    ofxPrecisionGrid * getRoot() {
+    ofxKitGrid * getRoot() {
         if (!parent) return this;
         return parent->getRoot();
     }
     
-    void remove(vector<ofxPrecisionGrid *> & v, ofxPrecisionGrid * c) {
+    void remove(vector<ofxKitGrid *> & v, ofxKitGrid * c) {
         auto idx = std::find(v.begin(), v.end(), c);
         if (idx != v.end()) v.erase(idx);
     }
@@ -510,15 +510,15 @@ public:
         for (int i = 0; i < j["inner"].size(); i++) {
             add( j["inner"][i], i);
         }
-        ofxPrecisionEvent e("loaded", this);
+        ofxKitEvent e("loaded", this);
         ofNotifyEvent(getRoot()->event, e);
         
     }
     
     void clear() {
         
-        ofxPrecisionGrid * r = getRoot();
-        ofxPrecisionEvent e("clear", this);
+        ofxKitGrid * r = getRoot();
+        ofxKitEvent e("clear", this);
         ofNotifyEvent(r->event, e);
         for (auto & u : collect() ) {
             remove( r->global, u);
@@ -530,8 +530,8 @@ public:
     
     
     void remove() {
-        ofxPrecisionGrid * r = getRoot();
-        ofxPrecisionEvent e("removed", this);
+        ofxKitGrid * r = getRoot();
+        ofxKitEvent e("removed", this);
         ofNotifyEvent(r->event, e);
         for (auto & u : collect() ) {
             remove( r->global, u);
@@ -542,17 +542,17 @@ public:
         delete this;
     }
     
-    vector<ofxPrecisionGrid *> collect() {
-        vector<ofxPrecisionGrid *> a;
+    vector<ofxKitGrid *> collect() {
+        vector<ofxKitGrid *> a;
         a.insert( a.end(), inner.begin(), inner.end() );
         for (auto & u : inner) {
-            vector<ofxPrecisionGrid *> b = u->collect();
+            vector<ofxKitGrid *> b = u->collect();
             a.insert( a.end(), b.begin(), b.end() );
         }
         return a;
     }
     
-    bool isInvalid( ofxPrecisionGrid * g ) {
+    bool isInvalid( ofxKitGrid * g ) {
         
         if ( g == this ) return true;
         
@@ -563,21 +563,21 @@ public:
             if (i < g->location.size()) {
                 int pp = g->location[i]; // from
                 
-//                ofLogVerbose("[ofxPrecisionGrid]") << "Checking if invalid:" << p << pp;
+//                ofLogVerbose("[ofxKitGrid]") << "Checking if invalid:" << p << pp;
                 
                 if (p != pp) invalid = false;
             }
         }
-//        if (invalid) ofLogVerbose("[ofxPrecisionGrid]") << "Invalid move!";
+//        if (invalid) ofLogVerbose("[ofxKitGrid]") << "Invalid move!";
         return invalid;
     }
     
-    bool move( ofxPrecisionGrid * u , int idx = -1) {
+    bool move( ofxKitGrid * u , int idx = -1) {
         
         if ( isInvalid(u) ) return false;
         
-        ofLogVerbose("[ofxPrecisionGrid]") << "Moving from: " << u->getLocationString();
-        ofLogVerbose("[ofxPrecisionGrid]") << "Moving to  : " << getLocationString();
+        ofLogVerbose("[ofxKitGrid]") << "Moving from: " << u->getLocationString();
+        ofLogVerbose("[ofxKitGrid]") << "Moving to  : " << getLocationString();
         
         if (u->parent) remove( u->parent->inner, u ); // remove from old parent
         u->ghost = false;
@@ -585,9 +585,9 @@ public:
         return true;
     }
     
-    ofxPrecisionGrid & add(ofJson & j, int idx = -1) {
+    ofxKitGrid & add(ofJson & j, int idx = -1) {
         
-        ofxPrecisionGrid * ch = new ofxPrecisionGrid( j["type"].get<int>() );
+        ofxKitGrid * ch = new ofxKitGrid( j["type"].get<int>() );
         ch->mH = j["height"].get<float>(); // default multiH
         ch->mW = j["width"].get<float>(); // default multiWidth
         
@@ -605,9 +605,9 @@ public:
         return * ch;
     }
     
-    ofxPrecisionGrid & add(ofxPrecisionGrid * ch, int idx = -1) {
+    ofxKitGrid & add(ofxKitGrid * ch, int idx = -1) {
         
-        ofxPrecisionGrid * root = getRoot();
+        ofxKitGrid * root = getRoot();
         remove(root->global, ch);
         
         ch->parent = this;
@@ -623,7 +623,7 @@ public:
         root->global.push_back(ch);
         amend();
         
-        ofxPrecisionEvent e("added", ch);
+        ofxKitEvent e("added", ch);
         ofNotifyEvent(root->event, e);
         
         /*-- Return vector --*/
@@ -631,9 +631,9 @@ public:
         return * ch;
     }
     
-    ofxPrecisionGrid & add(int t, int idx = -1) {
+    ofxKitGrid & add(int t, int idx = -1) {
         
-        ofxPrecisionGrid * ch = new ofxPrecisionGrid(t);
+        ofxKitGrid * ch = new ofxKitGrid(t);
         ch->mH = 1; // default multiH
         ch->mW = 1; // default multiWidth
         ch->parent = nullptr;
@@ -651,7 +651,7 @@ public:
     int getIndex() {
         if (!parent) return 0;
 //        if (!ghost) return -1;
-        ofxPrecisionGrid * t = this;
+        ofxKitGrid * t = this;
         auto it = find(parent->inner.begin(), parent->inner.end(), t);
         if (it != parent->inner.end()) {
             return distance(parent->inner.begin(), it);
@@ -714,7 +714,7 @@ public:
         return j;
     }
     
-    bool inside( ofxPrecisionGrid * u ) {
+    bool inside( ofxKitGrid * u ) {
         if ( u == this ) return true;
         bool b = false;
         for (auto & el : inner) if (el->inside( u )) b = true;

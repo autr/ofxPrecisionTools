@@ -1,9 +1,9 @@
 #pragma once
 
-struct ofxPrecisionError {
+struct ofxKitError {
     string msg;
     string name;
-    ofxPrecisionError(string m, string n) {
+    ofxKitError(string m, string n) {
         msg = m;
         name = n;
     }

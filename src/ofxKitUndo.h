@@ -1,12 +1,12 @@
 #pragma once
 
 #include "ofMain.h"
-#include "ofxPrecisionGrid.h"
-#include "ofxPrecisionEvent.h"
+#include "ofxKitGrid.h"
+#include "ofxKitEvent.h"
 
-class ofxPrecisionUndo {
+class ofxKitUndo {
 public:
-    ofxPrecisionGrid * unit;
+    ofxKitGrid * unit;
     float stamp;
     float tLimit;
     int aLimit;
@@ -16,7 +16,7 @@ public:
     vector<ofJson> store;
     int index;
     
-    ofxPrecisionUndo( ofxPrecisionGrid * u ) {
+    ofxKitUndo( ofxKitGrid * u ) {
         unit = u;
         tLimit = 0.2;
         aLimit = 20;
@@ -24,9 +24,9 @@ public:
         active = false;
         restoring = false;
         index = 0;
-        ofAddListener(unit->event, this, &ofxPrecisionUndo::onAction);
+        ofAddListener(unit->event, this, &ofxKitUndo::onAction);
     }
-    void onAction( ofxPrecisionEvent & e) {
+    void onAction( ofxKitEvent & e) {
         active = true;
         stamp = ofGetElapsedTimef();
         count += 1;

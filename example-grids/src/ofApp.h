@@ -1,10 +1,10 @@
 #pragma once
 
 #include "ofMain.h"
-#include "ofxPrecisionGrid.h"
-#include "ofxPrecisionUi.h"
-#include "ofxPrecisionUndo.h"
-#include "ofxPrecisionCursor.h"
+#include "ofxKitGrid.h"
+#include "ofxKitUi.h"
+#include "ofxKitUndo.h"
+#include "ofxKitCursor.h"
 #include "ofxTimeMeasurements.h"
 
 class ofApp : public ofBaseApp{
@@ -27,12 +27,12 @@ class ofApp : public ofBaseApp{
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
     
-        void draw(ofxPrecisionGrid * g, int x, int y);
-        ofxPrecisionGrid * grid;
-        ofxPrecisionUi * ui;
-        ofxPrecisionUndo * undo;
-        ofxPrecisionCursor * cursor;
-        void generate(ofxPrecisionGrid * iter);
+        void draw(ofxKitGrid * g, int x, int y);
+        ofxKitGrid * grid;
+        ofxKitUi * ui;
+        ofxKitUndo * undo;
+        ofxKitCursor * cursor;
+        void generate(ofxKitGrid * iter);
         int depth;
         int maxIter;
         int count;
@@ -42,7 +42,7 @@ class ofApp : public ofBaseApp{
         ofJson json;
         int mx, my;
 //        ofxScrollBox scroll;
-        ofxPrecisionGrid * bin;
+        ofxKitGrid * bin;
     
         
 };

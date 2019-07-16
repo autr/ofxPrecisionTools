@@ -1,12 +1,12 @@
 #pragma once
 
-struct ofxPrecisionGridStyle {
+struct ofxKitGridStyle {
     ofColor defaultColor;
     ofColor hoverColor;
     ofColor dropColor;
     float minWidth;
     float minHeight;
-    ofxPrecisionGridStyle() {
+    ofxKitGridStyle() {
         defaultColor = ofColor(0,120,120, 255);
         hoverColor = ofColor(255, 255, 255, 255);
         dropColor = ofColor(150, 255, 255, 100);

@@ -1,8 +1,8 @@
 
-#include "ofxPrecisionUi.h"
+#include "ofxKitUi.h"
 
 
-ofxPrecisionUi::ofxPrecisionUi(ofxPrecisionGrid * u, ofxPrecisionGrid * b) {
+ofxKitUi::ofxKitUi(ofxKitGrid * u, ofxKitGrid * b) {
     unit = u;
     mode = PRECISION_M_RESIZE;
     isCurrently = CURRENTLY_NOWT;
@@ -11,16 +11,16 @@ ofxPrecisionUi::ofxPrecisionUi(ofxPrecisionGrid * u, ofxPrecisionGrid * b) {
     bin = b;
     
     for (auto & u : unit->global) {
-        ofxPrecisionAreas a( u );
+        ofxKitAreas a( u );
         areas[u] = a;
     }
     
-    ofAddListener(unit->event, this, &ofxPrecisionUi::onAction);
+    ofAddListener(unit->event, this, &ofxKitUi::onAction);
     
     offsetScroll();
 }
 
-void ofxPrecisionUi::keypress(int k) {
+void ofxKitUi::keypress(int k) {
     
     int i = k - 48;
     if (i == PRECISION_M_NONE) mode = PRECISION_M_NONE;
@@ -37,13 +37,13 @@ void ofxPrecisionUi::keypress(int k) {
         }
     }
 }
-void ofxPrecisionUi::keyrelease(int k) {
+void ofxKitUi::keyrelease(int k) {
     
 }
 
-void ofxPrecisionUi::up() {
+void ofxKitUi::up() {
     
-    ofxPrecisionGrid * u = current;
+    ofxKitGrid * u = current;
     
     if (u) {
         float d = 99999;
@@ -60,17 +60,17 @@ void ofxPrecisionUi::up() {
         }
     }
 }
-void ofxPrecisionUi::down() {
+void ofxKitUi::down() {
     
-    ofxPrecisionGrid * u = current;
+    ofxKitGrid * u = current;
     
     if (u && u->parent) {
         if (u->parent) select(u->parent);
     }
 }
-void ofxPrecisionUi::prev() {
+void ofxKitUi::prev() {
     
-    ofxPrecisionGrid * u = current;
+    ofxKitGrid * u = current;
     
     if (u && u->parent) {
         
@@ -79,9 +79,9 @@ void ofxPrecisionUi::prev() {
         select( u->parent->inner[i] );
     }
 }
-void ofxPrecisionUi::next() {
+void ofxKitUi::next() {
     
-    ofxPrecisionGrid * u = current;
+    ofxKitGrid * u = current;
     
     if (u && u->parent) {
         
@@ -91,11 +91,11 @@ void ofxPrecisionUi::next() {
     }
 }
 
-void ofxPrecisionUi::select(ofxPrecisionGrid * u) {
+void ofxKitUi::select(ofxKitGrid * u) {
     current = u;
 }
 
-void ofxPrecisionUi::drawAreas() {
+void ofxKitUi::drawAreas() {
     for( auto & a : areas) {
         ofSetColor(255,0,0,150);
         ofNoFill();
@@ -106,7 +106,7 @@ void ofxPrecisionUi::drawAreas() {
     }
 }
 
-void ofxPrecisionUi::onAction(ofxPrecisionEvent & e) {
+void ofxKitUi::onAction(ofxKitEvent & e) {
     
     if (e.type == "clear" ) {
         areas.clear();
@@ -118,7 +118,7 @@ void ofxPrecisionUi::onAction(ofxPrecisionEvent & e) {
     if (e.type == "added") select(e.u);
     
     if (e.type == "amended") {
-        ofxPrecisionAreas a( e.u );
+        ofxKitAreas a( e.u );
         areas[e.u] = a;
     }
     if (e.type == "removed") {
@@ -130,9 +130,9 @@ void ofxPrecisionUi::onAction(ofxPrecisionEvent & e) {
     
 }
 
-void ofxPrecisionUi::offsetScroll() {
+void ofxKitUi::offsetScroll() {
     
-    vector<ofxPrecisionGrid *> list;
+    vector<ofxKitGrid *> list;
     int count = unit->getScrollingGrids(list);
     float x = unit->bounds.x;
     float w = unit->bounds.width;
@@ -146,7 +146,7 @@ void ofxPrecisionUi::offsetScroll() {
     unit->amend();
 }
 
-void ofxPrecisionUi::draw(bool iso) {
+void ofxKitUi::draw(bool iso) {
     
     bool modeMove = isMode( PRECISION_M_MOVE );
     bool modeResize = isMode( PRECISION_M_RESIZE );
@@ -174,7 +174,7 @@ void ofxPrecisionUi::draw(bool iso) {
         int d = current->depth();
         ofTranslate(0, 0, d * 80 );
         }
-        ofxPrecisionGrid * curr = current;
+        ofxKitGrid * curr = current;
         ofDrawRectangle(curr->bounds);
         ofNoFill();
         if (iso) ofPopMatrix();
@@ -193,7 +193,7 @@ void ofxPrecisionUi::draw(bool iso) {
     
         for (auto & act : actions) {
             
-            ofxPrecisionGrid * u = act.unit;
+            ofxKitGrid * u = act.unit;
             int d = u->depth();
             
             ofPushMatrix();
@@ -288,9 +288,9 @@ void ofxPrecisionUi::draw(bool iso) {
     
 }
 
-ofxPrecisionGrid * ofxPrecisionUi::deepest(int x, int y) {
+ofxKitGrid * ofxKitUi::deepest(int x, int y) {
     
-    ofxPrecisionGrid * o = nullptr;
+    ofxKitGrid * o = nullptr;
     int d = -1;
     for (auto & u : unit->global) {
         
@@ -305,17 +305,17 @@ ofxPrecisionGrid * ofxPrecisionUi::deepest(int x, int y) {
 }
 
 
-void ofxPrecisionUi::setStatus(int i) {
+void ofxKitUi::setStatus(int i) {
     isCurrently = i;
 }
 
-bool ofxPrecisionUi::is(int i) {
+bool ofxKitUi::is(int i) {
     return isCurrently == i;
 }
-bool ofxPrecisionUi::isMode(int i) {
+bool ofxKitUi::isMode(int i) {
     return mode == i;
 }
-void ofxPrecisionUi::selectFromRect(ofRectangle r) {
+void ofxKitUi::selectFromRect(ofRectangle r) {
     
     selected.clear();
     for (auto & u : unit->global) {
@@ -325,7 +325,7 @@ void ofxPrecisionUi::selectFromRect(ofRectangle r) {
     current = findCommonParent( selected );
 }
 
-void ofxPrecisionUi::logAction( ofxPrecisionAction & a ) {
+void ofxKitUi::logAction( ofxKitAction & a ) {
     
     int t = a.type;
     string m = "";
@@ -345,10 +345,10 @@ void ofxPrecisionUi::logAction( ofxPrecisionAction & a ) {
     if (t == PRECISION_DL) m = "PRECISION_DL";
     if (t == PRECISION_DH) m = "PRECISION_DH";
     if (t == PRECISION_DV) m = "PRECISION_DV";
-    ofLogVerbose("[ofxPrecisionUi]") << "Pressed:" << m << a.unit->name;
+    ofLogVerbose("[ofxKitUi]") << "Pressed:" << m << a.unit->name;
 }
 
-void ofxPrecisionUi::pressed(int x, int y) {
+void ofxKitUi::pressed(int x, int y) {
     
     /*-- dropper --*/
     
@@ -405,7 +405,7 @@ void ofxPrecisionUi::pressed(int x, int y) {
 }
 
 
-void ofxPrecisionUi::dragged(int x, int y) {
+void ofxKitUi::dragged(int x, int y) {
     
     /*-- dropper --*/
     
@@ -465,7 +465,7 @@ void ofxPrecisionUi::dragged(int x, int y) {
     
     
 }
-void ofxPrecisionUi::released(int x, int y) {
+void ofxKitUi::released(int x, int y) {
     
     /*-- dropper --*/
     
@@ -499,7 +499,7 @@ void ofxPrecisionUi::released(int x, int y) {
     
 }
 
-void ofxPrecisionUi::moved(int x, int y) {
+void ofxKitUi::moved(int x, int y) {
     
     
     bool modeMove = isMode(PRECISION_M_MOVE);
@@ -520,7 +520,7 @@ void ofxPrecisionUi::moved(int x, int y) {
 }
 
 
-void ofxPrecisionUi::clickToSelect( int x, int y ) {
+void ofxKitUi::clickToSelect( int x, int y ) {
     
     ofPoint p = pressLast;
     float t = ofGetElapsedTimef();
@@ -530,7 +530,7 @@ void ofxPrecisionUi::clickToSelect( int x, int y ) {
         
         /*-- select shared parent element --*/
         
-        ofxPrecisionGrid * pressed = deepest(x , y);
+        ofxKitGrid * pressed = deepest(x , y);
         
         if (pressed) {
             vector<int> newLoc;
@@ -579,54 +579,54 @@ void ofxPrecisionUi::clickToSelect( int x, int y ) {
 }
 
 
-void ofxPrecisionUi::addFromBin( int x, int y ) {
+void ofxKitUi::addFromBin( int x, int y ) {
     
     /*-- drag and drop --*/
     
     
     for (auto & a : actions) {
-        ofxPrecisionGrid * p = a.unit->parent;
+        ofxKitGrid * p = a.unit->parent;
         
         int bef = a.unit->getIndex();
         int aft = a.unit->getIndex() + 1;
         
         if (a.type == PRECISION_DB) {
-            ofLogVerbose("[ofxPrecisionUi]") << "Dropping: bottom" << a.unit->name;
+            ofLogVerbose("[ofxKitUi]") << "Dropping: bottom" << a.unit->name;
             p->add(binChoice, aft);
             binChoice = -1;
             return;
         } else if (a.type == PRECISION_DR) {
-            ofLogVerbose("[ofxPrecisionUi]") << "Dropping: right" << a.unit->name;
+            ofLogVerbose("[ofxKitUi]") << "Dropping: right" << a.unit->name;
             p->add(binChoice, aft);
             binChoice = -1;
             return;
         } else if (a.type == PRECISION_DL) {
-            ofLogVerbose("[ofxPrecisionUi]") << "Dropping: left" << a.unit->name;
+            ofLogVerbose("[ofxKitUi]") << "Dropping: left" << a.unit->name;
             p->add(binChoice, bef);
             binChoice = -1;
             return;
         } else if (a.type == PRECISION_DT) {
-            ofLogVerbose("[ofxPrecisionUi]") << "Dropping: top" << a.unit->name;
+            ofLogVerbose("[ofxKitUi]") << "Dropping: top" << a.unit->name;
             p->add(binChoice, bef);
             binChoice = -1;
             return;
         } else if (a.type == PRECISION_IN) {
-            ofLogVerbose("[ofxPrecisionUi]") << "Dropping: inside" << a.unit->name;
+            ofLogVerbose("[ofxKitUi]") << "Dropping: inside" << a.unit->name;
             a.unit->add(binChoice);
             binChoice = -1;
             return;
         }
     }
     
-    ofLogVerbose("[ofxPrecisionUi]") << "Dropping: ghost";
+    ofLogVerbose("[ofxKitUi]") << "Dropping: ghost";
     
-//    ofxPrecisionGrid * ch = new ofxPrecisionGrid(binChoice);
+//    ofxKitGrid * ch = new ofxKitGrid(binChoice);
 //    ch->mH = 1; // default multiH
 //    ch->mW = 1; // default multiWidth
 //    ch->parent = nullptr;
     
     
-//    ofxPrecisionGrid * ch = &unit->add(binChoice);//new ofxPrecisionGrid(binChoice);
+//    ofxKitGrid * ch = &unit->add(binChoice);//new ofxKitGrid(binChoice);
 //    ch->mH = 1;
 //    ch->mW = 1;
 ////    if (ch->parent) ch->remove( ch->parent->inner, ch ); // remove from old parent
@@ -635,13 +635,13 @@ void ofxPrecisionUi::addFromBin( int x, int y ) {
 //    ch->amend();
 //    unit->amend();
 //
-//    ofxPrecisionEvent e("added", ch);
+//    ofxKitEvent e("added", ch);
 //    ofNotifyEvent(unit->event, e);
     
 }
 
 
-bool ofxPrecisionUi::moveToPosition( int x, int y ) {
+bool ofxKitUi::moveToPosition( int x, int y ) {
     
     if ( !current ) return false;
     
@@ -668,7 +668,7 @@ bool ofxPrecisionUi::moveToPosition( int x, int y ) {
                 bool isAfter = (a.type == PRECISION_DB || a.type == PRECISION_DR);
                 bool isBefore = (a.type == PRECISION_DL || a.type == PRECISION_DT);
                 int pos = (isAfter) ? a.unit->getIndex() + 1 : a.unit->getIndex();
-                ofxPrecisionGrid * target = (isInside) ? a.unit : a.unit->parent;
+                ofxKitGrid * target = (isInside) ? a.unit : a.unit->parent;
                 
                 actions.clear();
                 
@@ -682,7 +682,7 @@ bool ofxPrecisionUi::moveToPosition( int x, int y ) {
     return wasMoved;
 }
 
-void ofxPrecisionUi::dragToResize(int x, int y) {
+void ofxKitUi::dragToResize(int x, int y) {
     
     bool isShift = ofGetKeyPressed(OF_KEY_SHIFT);
     bool isAlt = ofGetKeyPressed(OF_KEY_ALT);
@@ -737,7 +737,7 @@ void ofxPrecisionUi::dragToResize(int x, int y) {
             
             
             for (int i = 0; i < a.unit->parent->inner.size(); i++) {
-                ofxPrecisionGrid * sib = a.unit->parent->inner[i];
+                ofxKitGrid * sib = a.unit->parent->inner[i];
                 float w = a.mWidths[i];
                 float h = a.mHeights[i];
                 bool isResize = (a.type == PRECISION_RR || a.type == PRECISION_RB );
@@ -825,7 +825,7 @@ void ofxPrecisionUi::dragToResize(int x, int y) {
 }
 
 
-void ofxPrecisionUi::clear() {
+void ofxKitUi::clear() {
     
     actions.clear();
     areas.clear();
@@ -836,7 +836,7 @@ void ofxPrecisionUi::clear() {
 }
 
 
-void ofxPrecisionUi::findDropPoints( int x, int y ) {
+void ofxKitUi::findDropPoints( int x, int y ) {
     
     
     ofPoint p(x, y);
@@ -896,7 +896,7 @@ void ofxPrecisionUi::findDropPoints( int x, int y ) {
             /*-- drop area --*/
             
             if (dropInside) {
-                ofxPrecisionAction a(PRECISION_IN, g, p, mWidths, mHeights);
+                ofxKitAction a(PRECISION_IN, g, p, mWidths, mHeights);
                 actions.push_back(a);
             }
             
@@ -904,28 +904,28 @@ void ofxPrecisionUi::findDropPoints( int x, int y ) {
             /*-- drop right --*/
             
             if (dropRight) {
-                ofxPrecisionAction a(PRECISION_DR, g, p, mWidths, mHeights);
+                ofxKitAction a(PRECISION_DR, g, p, mWidths, mHeights);
                 actions.push_back(a);
             }
             
             /*-- drop left --*/
             
             if (dropLeft) {
-                ofxPrecisionAction a(PRECISION_DL, g, p, mWidths, mHeights);
+                ofxKitAction a(PRECISION_DL, g, p, mWidths, mHeights);
                 actions.push_back(a);
             }
             
             /*-- drop bottom --*/
             
             if (dropBottom) {
-                ofxPrecisionAction a(PRECISION_DB, g, p, mWidths, mHeights);
+                ofxKitAction a(PRECISION_DB, g, p, mWidths, mHeights);
                 actions.push_back(a);
             }
             
             /*-- drop top --*/
             
             if (dropTop) {
-                ofxPrecisionAction a(PRECISION_DT, g, p, mWidths, mHeights);
+                ofxKitAction a(PRECISION_DT, g, p, mWidths, mHeights);
                 actions.push_back(a);
             }
         }
@@ -935,7 +935,7 @@ void ofxPrecisionUi::findDropPoints( int x, int y ) {
     return isFound;
 }
 
-void ofxPrecisionUi::findResizePoints( int x, int y ) {
+void ofxKitUi::findResizePoints( int x, int y ) {
     
     
     ofPoint p(x, y);
@@ -987,25 +987,25 @@ void ofxPrecisionUi::findResizePoints( int x, int y ) {
         /*-- ghosts --*/
         
         if (resizeGhostLeft) {
-            ofxPrecisionAction a(PRECISION_RL, g, p, mWidths, mHeights);
+            ofxKitAction a(PRECISION_RL, g, p, mWidths, mHeights);
             actions.push_back(a);
         }
         if (resizeGhostTop) {
-            ofxPrecisionAction a(PRECISION_RL, g, p, mWidths, mHeights);
+            ofxKitAction a(PRECISION_RL, g, p, mWidths, mHeights);
             actions.push_back(a);
         }
         
         /*-- height drag --*/
         
         if (resizeHeight || resizeGhostBottom) {
-            ofxPrecisionAction a(PRECISION_RB, g, p, mWidths, mHeights);
+            ofxKitAction a(PRECISION_RB, g, p, mWidths, mHeights);
             actions.push_back(a);
         }
         
         /*-- width drag --*/
         
         if (resizeWidth || resizeGhostRight) {
-            ofxPrecisionAction a(PRECISION_RR, g, p, mWidths, mHeights);
+            ofxKitAction a(PRECISION_RR, g, p, mWidths, mHeights);
             actions.push_back(a);
         }
         
@@ -1014,7 +1014,7 @@ void ofxPrecisionUi::findResizePoints( int x, int y ) {
 }
 
 
-ofxPrecisionGrid * ofxPrecisionUi::findCommonParent( vector<ofxPrecisionGrid *> list ) {
+ofxKitGrid * ofxKitUi::findCommonParent( vector<ofxKitGrid *> list ) {
     
     if (list.size() <= 0) return nullptr;
     bool found = false;

@@ -1,8 +1,8 @@
-#include "ofxPrecisionCursor.h"
+#include "ofxKitCursor.h"
 #import <Cocoa/Cocoa.h>
 
 
-ofxPrecisionCursor::ofxPrecisionCursor() {
+ofxKitCursor::ofxKitCursor() {
     
 //    ofHideCursor();
     [[NSCursor pointingHandCursor] set];
@@ -35,11 +35,11 @@ ofxPrecisionCursor::ofxPrecisionCursor() {
     }
 }
 
-void ofxPrecisionCursor::random() {
+void ofxKitCursor::random() {
     curr = names[ ofRandom(0, names.size()) ];
 }
 
-void ofxPrecisionCursor::draw(float x, float y) {
+void ofxKitCursor::draw(float x, float y) {
     
 //    [[NSCursor openHand] set];
 //    [[NSCursor closedHand] set];

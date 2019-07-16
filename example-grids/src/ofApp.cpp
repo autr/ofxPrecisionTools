@@ -14,16 +14,16 @@ void ofApp::setup(){
     maxIter = 6;
     sel = {};
     
-    cursor = new ofxPrecisionCursor();
-    grid = new ofxPrecisionGrid();
+    cursor = new ofxKitCursor();
+    grid = new ofxKitGrid();
     ofRectangle r(400,200,ofGetWidth() - 800, ofGetHeight() - 400);
     grid->set(r);
-    undo = new ofxPrecisionUndo(grid);
+    undo = new ofxKitUndo(grid);
     generate(grid);
     
     iso = false;
     
-    bin = new ofxPrecisionGrid();
+    bin = new ofxKitGrid();
     bin->set(20,20,20,80);
     bin->add(0);
     bin->add(0);
@@ -32,32 +32,32 @@ void ofApp::setup(){
     
     
     
-    ui = new ofxPrecisionUi(grid, bin);
+    ui = new ofxKitUi(grid, bin);
     
     ofBackground(0);
     
 }
 
-void ofApp::generate(ofxPrecisionGrid * iter) {
+void ofApp::generate(ofxKitGrid * iter) {
     
-    ofxPrecisionGrid * a = &grid->add(0);
+    ofxKitGrid * a = &grid->add(0);
     a->add(0);
     a->add(0);
     a->add(0);
     a->add(0);
     a->add(0);
     a->setScroll(true);
-    ofxPrecisionGrid * aa = &grid->add(1);
+    ofxKitGrid * aa = &grid->add(1);
     aa->add(0);
-    ofxPrecisionGrid * aaa = &aa->add(0);
+    ofxKitGrid * aaa = &aa->add(0);
     aaa->add(0);
-    ofxPrecisionGrid * aaaa = &aaa->add(1);
+    ofxKitGrid * aaaa = &aaa->add(1);
     aaaa->add(0);
     aaaa->add(0);
     aaaa->add(0);
-    ofxPrecisionGrid * b = &aa->add(0);
+    ofxKitGrid * b = &aa->add(0);
     b->add(0);
-    ofxPrecisionGrid * bb = &b->add(1);
+    ofxKitGrid * bb = &b->add(1);
     bb->add(0);
     bb->add(0);
     bb->add(0);
@@ -75,7 +75,7 @@ void ofApp::update(){
 //    TS_STOP("update");
 }
 
-void ofApp::draw(ofxPrecisionGrid * g, int x, int y) {
+void ofApp::draw(ofxKitGrid * g, int x, int y) {
     
     ofFill();
     ofSetColor(grid->style.hoverColor);

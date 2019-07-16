@@ -1,15 +1,15 @@
 #pragma once
 
 
-struct ofxPrecisionAction {
+struct ofxKitAction {
     ofRectangle oBounds;
     int type;
     ofPoint oPress;
     vector<float> mHeights;
     vector<float> mWidths;
-    ofxPrecisionGrid * unit;
+    ofxKitGrid * unit;
     
-    ofxPrecisionAction(int t,  ofxPrecisionGrid * u, ofPoint p, vector<float> mW, vector<float> mH) {
+    ofxKitAction(int t,  ofxKitGrid * u, ofPoint p, vector<float> mW = {}, vector<float> mH = {}) {
         type = t;
         unit = u;
         oPress = p;

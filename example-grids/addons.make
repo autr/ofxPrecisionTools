@@ -1,5 +1,5 @@
 ofxEasing
-ofxPrecisionTools
+ofxKit
 ofxScrollBox
 ofxSvg
 ofxTimeMeasurements
