@@ -1,7 +1,7 @@
 
 #pragma once
 #include "ofMain.h"
-#include "ofxScrollBox.h"
+//#include "ofxScrollBox.h"
 
 #define PRECISION_COL 0
 #define PRECISION_ROW 1

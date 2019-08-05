@@ -1,13 +1,19 @@
 #pragma once
 
 #include "ofMain.h"
-#include "ofxSVG.h"
+
+enum Cursor {
+    openHand, closedHand, arrowCursor, resizeLeftRight
+};
+//#include "ofxSVG.h"
 
 class ofxKitCursor {
+private:
+    static ofPtr<ofxKitCursor> instance;
+    static ofxKitCursor *instancePtr;
 public:
     ofDirectory d;
     vector<string> names;
-    map<string, ofxSVG> svg;
     map<string, ofTexture> t;
     string curr;
     ofxKitCursor();
@@ -15,4 +21,10 @@ public:
     void random();
     
     void draw(float x, float y);
+    static void set(string s);
+    
+    virtual ~ofxKitCursor();
+    static ofPtr<ofxKitCursor> &getInstance();
+    
+    
 };

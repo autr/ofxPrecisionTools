@@ -6,6 +6,7 @@
 #include "ofxKitUndo.h"
 #include "ofxKitCursor.h"
 #include "ofxTimeMeasurements.h"
+#include "ofxKitLogger.h"
 
 class ofApp : public ofBaseApp{
 
@@ -43,6 +44,8 @@ class ofApp : public ofBaseApp{
         int mx, my;
 //        ofxScrollBox scroll;
         ofxKitGrid * bin;
+    
+    ofxKitLogger logger;
     
         
 };
