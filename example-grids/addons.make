@@ -1,5 +1,0 @@
-ofxEasing
-ofxKit
-ofxScrollBox
-ofxSvg
-ofxTimeMeasurements

@@ -1,5 +1,6 @@
 .DS_Store
 *.xcodeproj
 *.xcconfig
+*.plist
 *.app/
 bin

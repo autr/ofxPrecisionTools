@@ -1,3 +1,0 @@
-ofxCocoaWindow
-ofxKit
-ofxTimeMeasurements
